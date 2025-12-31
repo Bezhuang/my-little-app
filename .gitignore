@@ -1,0 +1,79 @@
+# ====================
+# Gitignore for My Little App
+# ====================
+
+# ====================
+# IDE and Editor
+# ====================
+.idea/
+.vscode/
+.claude
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ====================
+# Build Outputs
+# ====================
+my-little-app-backend/target/
+my-little-app-admin/dist/
+my-little-app-frontend/dist/
+my-little-app-frontend/unpackage/
+
+# ====================
+# Dependencies
+# ====================
+node_modules/
+my-little-app-backend/.mvn/wrapper/maven-wrapper.jar
+
+# ====================
+# Configuration (Sensitive)
+# ====================
+application.properties
+application.yml
+application-secret.yml
+*.pem
+*.keystore
+*.jks
+
+# ====================
+# Logs
+# ====================
+*.log
+logs/
+my-little-app-backend/logs/
+
+# ====================
+# Testing
+# ====================
+coverage/
+.nyc_output/
+
+# ====================
+# OS Generated
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ====================
+# Environment
+# ====================
+.env
+.env.local
+.env.*.local
+*.local
+
+# ====================
+# Temp Files
+# ====================
+*.tmp
+*.temp
+*.bak
+*.backup

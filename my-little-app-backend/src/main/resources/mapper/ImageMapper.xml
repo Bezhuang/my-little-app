@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.ImageMapper">
+
+    <resultMap id="ImageResultMap" type="com.bezhuang.my_little_app_backend.entity.Image">
+        <id property="id" column="id"/>
+        <result property="filename" column="filename"/>
+        <result property="contentType" column="content_type"/>
+        <result property="data" column="data"/>
+        <result property="size" column="size"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 查询所有图片 -->
+    <select id="selectAll" resultMap="ImageResultMap">
+        SELECT id, filename, content_type, size, create_time, update_time
+        FROM t_image
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 分页查询图片 -->
+    <select id="selectPage" resultMap="ImageResultMap">
+        SELECT id, filename, content_type, size, create_time, update_time
+        FROM t_image
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 统计图片数量 -->
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM t_image
+    </select>
+
+    <!-- 根据ID查询图片 -->
+    <select id="selectById" resultMap="ImageResultMap">
+        SELECT id, filename, content_type, data, size, create_time, update_time
+        FROM t_image
+        WHERE id = #{id}
+    </select>
+
+    <!-- 插入图片 -->
+    <insert id="insert" parameterType="com.bezhuang.my_little_app_backend.entity.Image" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_image (filename, content_type, data, size, create_time, update_time)
+        VALUES (#{filename}, #{contentType}, #{data}, #{size}, NOW(), NOW())
+    </insert>
+
+    <!-- 删除图片 -->
+    <delete id="deleteById">
+        DELETE FROM t_image WHERE id = #{id}
+    </delete>
+
+    <!-- 获取最新图片 -->
+    <select id="selectLatest" resultMap="ImageResultMap">
+        SELECT id, filename, content_type, size, create_time, update_time
+        FROM t_image
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

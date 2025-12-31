@@ -1,0 +1,107 @@
+{
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
+		}
+	},
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "我的小应用",
+		"navigationBarBackgroundColor": "#FFFFFF",
+		"backgroundColor": "#F5F5F5",
+		"rpxCalcMaxDeviceWidth": 1024,
+		"rpxCalcBaseDeviceWidth": 375,
+		"rpxCalcEnable": true,
+		"maxWidth": 1200
+	},
+	"pages": [
+		{
+			"path": "pages/blog/index",
+			"style": {
+				"navigationBarTitleText": "想法"
+			}
+		},
+		{
+			"path": "pages/ai-chat/index",
+			"style": {
+				"navigationBarTitleText": "Bezhuang AI",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/tools/index",
+			"style": {
+				"navigationBarTitleText": "工具",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/index",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/register/index",
+			"style": {
+				"navigationBarTitleText": "注册",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/forgot-password/index",
+			"style": {
+				"navigationBarTitleText": "忘记密码",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/edit-profile/index",
+			"style": {
+				"navigationBarTitleText": "编辑资料"
+			}
+		},
+		{
+			"path": "pages/webview/index",
+			"style": {
+				"navigationBarTitleText": "网页",
+				"navigationStyle": "custom",
+				"disableSwipeBack": true
+			}
+		}
+	],
+	"tabBar": {
+		"color": "#999999",
+		"selectedColor": "#4CD964",
+		"borderStyle": "black",
+		"backgroundColor": "#ffffff",
+		"fontSize": "18px",
+		"list": [
+			{
+				"pagePath": "pages/blog/index",
+				"text": "想法"
+			},
+			{
+				"pagePath": "pages/ai-chat/index",
+				"text": "AI 助手"
+			},
+			{
+				"pagePath": "pages/tools/index",
+				"text": "工具"
+			},
+			{
+				"pagePath": "pages/profile/index",
+				"text": "我的"
+			}
+		]
+	}
+}

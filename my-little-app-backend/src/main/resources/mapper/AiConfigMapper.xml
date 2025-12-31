@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.AiConfigMapper">
+
+    <resultMap id="BaseResultMap" type="com.bezhuang.my_little_app_backend.entity.AiConfig">
+        <id column="id" property="id"/>
+        <result column="config_key" property="configKey"/>
+        <result column="config_value" property="configValue"/>
+        <result column="description" property="description"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectByConfigKey" resultMap="BaseResultMap">
+        SELECT id, config_key, config_value, description, created_at, updated_at
+        FROM ai_config
+        WHERE config_key = #{configKey}
+    </select>
+
+    <update id="updateConfigValue">
+        UPDATE ai_config
+        SET config_value = #{configValue}, updated_at = NOW()
+        WHERE config_key = #{configKey}
+    </update>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_config (config_key, config_value, description, created_at, updated_at)
+        VALUES (#{configKey}, #{configValue}, #{description}, NOW(), NOW())
+    </insert>
+
+</mapper>

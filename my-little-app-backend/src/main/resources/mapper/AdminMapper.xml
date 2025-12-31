@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.AdminMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="AdminResultMap" type="com.bezhuang.my_little_app_backend.entity.Admin">
+        <id property="id" column="id"/>
+        <result property="username" column="username"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="phone" column="phone"/>
+        <result property="avatar" column="avatar"/>
+        <result property="status" column="status"/>
+        <result property="role" column="role"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <!-- 通用查询列 -->
+    <sql id="Base_Column_List">
+        id, username, email, password, phone, avatar, status, role, create_time, update_time
+    </sql>
+
+    <!-- 根据ID查询 -->
+    <select id="selectById" resultMap="AdminResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_admin
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据用户名查询 -->
+    <select id="selectByUsername" resultMap="AdminResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_admin
+        WHERE username = #{username}
+    </select>
+
+    <!-- 根据邮箱查询 -->
+    <select id="selectByEmail" resultMap="AdminResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_admin
+        WHERE email = #{email}
+    </select>
+
+    <!-- 查询所有管理员 -->
+    <select id="selectAll" resultMap="AdminResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_admin
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 插入管理员 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_admin (username, email, password, phone, avatar, status, role, create_time, update_time)
+        VALUES (#{username}, #{email}, #{password}, #{phone}, #{avatar}, #{status}, #{role}, #{createTime}, #{updateTime})
+    </insert>
+
+    <!-- 更新管理员信息（不包含密码） -->
+    <update id="updateWithoutPassword">
+        UPDATE t_admin
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="role != null">role = #{role},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新密码 -->
+    <update id="updatePassword">
+        UPDATE t_admin
+        SET password = #{password}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新状态 -->
+    <update id="updateStatus">
+        UPDATE t_admin
+        SET status = #{status}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除管理员 -->
+    <delete id="deleteById">
+        DELETE FROM t_admin WHERE id = #{id}
+    </delete>
+
+    <!-- 检查用户名是否存在 -->
+    <select id="existsByUsername" resultType="int">
+        SELECT COUNT(*) FROM t_admin
+        WHERE username = #{username}
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 检查邮箱是否存在 -->
+    <select id="existsByEmail" resultType="int">
+        SELECT COUNT(*) FROM t_admin
+        WHERE email = #{email}
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 统计管理员数量 -->
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM t_admin
+    </select>
+
+</mapper>
+
+
+
+
+

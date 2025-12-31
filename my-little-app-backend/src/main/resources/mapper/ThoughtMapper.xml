@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.ThoughtMapper">
+
+    <resultMap id="ThoughtResultMap" type="com.bezhuang.my_little_app_backend.entity.Thought">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <result property="imageIds" column="image_ids"/>
+        <result property="visibility" column="visibility"/>
+        <result property="likeCount" column="like_count"/>
+        <result property="commentCount" column="comment_count"/>
+        <result property="adminId" column="admin_id"/>
+        <result property="adminUsername" column="admin_username"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, content, image_ids, visibility, like_count, comment_count, admin_id, admin_username, create_time, update_time
+    </sql>
+
+    <select id="selectById" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPublic" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        WHERE visibility = 1
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectAllForAdmin" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPage" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        WHERE visibility = 1
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectPublicPage" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        WHERE visibility = 1
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectAllPageForAdmin" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO t_thought (content, image_ids, visibility, like_count, comment_count, admin_id, admin_username, create_time, update_time)
+        VALUES (#{content}, #{imageIds}, #{visibility}, #{likeCount}, #{commentCount}, #{adminId}, #{adminUsername}, NOW(), NOW())
+    </insert>
+
+    <update id="update">
+        UPDATE t_thought
+        <set>
+            <if test="content != null">content = #{content},</if>
+            <if test="imageIds != null">image_ids = #{imageIds},</if>
+            <if test="visibility != null">visibility = #{visibility},</if>
+            <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM t_thought WHERE id = #{id}
+    </delete>
+
+    <update id="updateLikeCount">
+        UPDATE t_thought
+        SET like_count = #{likeCount}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateCommentCount">
+        UPDATE t_thought
+        SET comment_count = #{commentCount}
+        WHERE id = #{id}
+    </update>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM t_thought
+    </select>
+
+    <select id="countPublic" resultType="int">
+        SELECT COUNT(*) FROM t_thought WHERE visibility = 1
+    </select>
+
+    <select id="selectLatest" resultMap="ThoughtResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM t_thought
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

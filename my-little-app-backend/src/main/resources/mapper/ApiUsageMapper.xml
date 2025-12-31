@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.ApiUsageMapper">
+
+    <resultMap id="BaseResultMap" type="com.bezhuang.my_little_app_backend.entity.ApiUsage">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="tokens_remaining" property="tokensRemaining"/>
+        <result column="search_remaining" property="searchRemaining"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT id, user_id, tokens_remaining, search_remaining, created_at, updated_at
+        FROM api_usage
+        WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO api_usage (user_id, tokens_remaining, search_remaining, created_at, updated_at)
+        VALUES (#{userId}, #{tokensRemaining}, #{searchRemaining}, NOW(), NOW())
+    </insert>
+
+    <update id="updateTokensRemaining">
+        UPDATE api_usage
+        SET tokens_remaining = #{tokensRemaining}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateSearchRemaining">
+        UPDATE api_usage
+        SET search_remaining = #{searchRemaining}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>
