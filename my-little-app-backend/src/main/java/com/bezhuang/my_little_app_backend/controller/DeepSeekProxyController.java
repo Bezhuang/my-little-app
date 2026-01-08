@@ -72,12 +72,17 @@ public class DeepSeekProxyController {
             @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        logger.info("========== SSE 流式请求开始 ==========");
+        logger.info("请求路径: /api/ai/chat/stream");
+
         if (userDetails == null) {
+            logger.warn("SSE 请求未登录");
             SseEmitter emitter = new SseEmitter();
             try {
                 emitter.send(SseEmitter.event().name("error").data("{\"error\": \"请先登录\"}"));
                 emitter.complete();
             } catch (IOException e) {
+                logger.error("发送未登录错误失败", e);
                 emitter.completeWithError(e);
             }
             return emitter;
@@ -90,12 +95,17 @@ public class DeepSeekProxyController {
         Boolean enableWebSearch = request.get("enableWebSearch") != null &&
                 Boolean.parseBoolean(request.get("enableWebSearch").toString());
 
+        logger.info("用户ID: {}, 消息数: {}, 深度思考: {}, 联网搜索: {}",
+                userDetails.getId(), messages != null ? messages.size() : 0, enableDeepThink, enableWebSearch);
+
         if (messages == null || messages.isEmpty()) {
+            logger.warn("SSE 请求消息为空");
             SseEmitter emitter = new SseEmitter();
             try {
                 emitter.send(SseEmitter.event().name("error").data("{\"error\": \"消息不能为空\"}"));
                 emitter.complete();
             } catch (IOException e) {
+                logger.error("发送空消息错误失败", e);
                 emitter.completeWithError(e);
             }
             return emitter;
@@ -109,13 +119,18 @@ public class DeepSeekProxyController {
             }
         }
 
+        logger.info("对话轮数: {}/{}", userMessageCount, MAX_CONVERSATION_ROUNDS);
+
         if (userMessageCount >= MAX_CONVERSATION_ROUNDS) {
+            logger.warn("用户 {} 达到对话轮数上限: {}", userDetails.getId(), MAX_CONVERSATION_ROUNDS);
             SseEmitter emitter = new SseEmitter();
             try {
                 emitter.send(SseEmitter.event().name("warning")
-                        .data("{\"warning\": \"对话轮数已达上限，请清除会话后继续对话\"}"));
+                        .data("{\"warning\": \"已达10轮对话上限，请点击右上角+号开启新对话\"}"));
                 emitter.complete();
+                logger.info("已发送对话轮数上限警告");
             } catch (IOException e) {
+                logger.error("发送对话轮数警告失败", e);
                 emitter.completeWithError(e);
             }
             return emitter;
@@ -124,16 +139,21 @@ public class DeepSeekProxyController {
         // 检查配额（启用联网搜索时才检查搜索次数）
         String quotaWarning = apiUsageService.getQuotaWarning(userDetails.getId(), enableWebSearch);
         if (quotaWarning != null) {
+            logger.warn("用户 {} 配额不足: {}", userDetails.getId(), quotaWarning);
             SseEmitter emitter = new SseEmitter();
             try {
                 emitter.send(SseEmitter.event().name("warning")
                         .data("{\"warning\": " + escapeJson(quotaWarning) + "}"));
                 emitter.complete();
+                logger.info("已发送配额不足警告");
             } catch (IOException e) {
+                logger.error("发送配额警告失败", e);
                 emitter.completeWithError(e);
             }
             return emitter;
         }
+
+        logger.info("SSE 连接建立成功，准备发送流式响应");
 
         SseEmitter emitter = new SseEmitter(300000L);
 
@@ -160,6 +180,7 @@ public class DeepSeekProxyController {
 
         emitter.onError(e -> {
             heartbeatScheduler.shutdown();
+            logger.error("SSE 连接错误: {}", e.getMessage());
         });
 
         try {
@@ -172,21 +193,26 @@ public class DeepSeekProxyController {
                 messagesToSend.add(new HashMap<>(msg));
             }
 
+            logger.info("发送 SSE start 事件");
             emitter.send(SseEmitter.event().name("start").data("{\"type\": \"start\"}"));
 
             // 执行工具调用流程（AI 自主决定是否调用工具）
+            logger.info("开始执行工具调用流程");
             executeWithToolCalls(messagesToSend, enableDeepThink, enableWebSearch, emitter,
                     heartbeatScheduler, userDetails.getId());
 
         } catch (Exception e) {
-            logger.error("调用 DeepSeek API 失败", e);
+            logger.error("调用 DeepSeek API 失败: {}", e.getMessage(), e);
             try {
+                logger.info("发送 SSE error 事件");
                 emitter.send(SseEmitter.event().name("error")
                         .data("{\"error\": " + escapeJson(e.getMessage()) + "}"));
             } catch (IOException ioException) {
+                logger.error("发送 SSE 错误事件失败", ioException);
                 emitter.completeWithError(ioException);
             }
             emitter.completeWithError(e);
+            logger.info("SSE 流式请求异常结束");
         }
 
         return emitter;
@@ -248,7 +274,7 @@ public class DeepSeekProxyController {
         }
 
         if (userMessageCount >= MAX_CONVERSATION_ROUNDS) {
-            return Map.of("success", false, "warning", true, "message", "对话轮数已达上限");
+            return Map.of("success", false, "warning", true, "message", "已达10轮对话上限，请开启新对话");
         }
 
         // 检查配额（启用联网搜索时才检查搜索次数）
@@ -456,6 +482,7 @@ public class DeepSeekProxyController {
 
     /**
      * 流式执行工具调用流程（支持深度思考）
+     * 使用同步 API 调用 DeepSeek，前端通过打字机效果逐字显示
      */
     private void executeWithToolCalls(List<Map<String, Object>> messages, boolean enableDeepThink,
                                       boolean enableWebSearch, SseEmitter emitter,
@@ -463,12 +490,11 @@ public class DeepSeekProxyController {
         String chatModel = deepSeekConfig.getModel();
         String reasonerModel = deepSeekConfig.getReasonerModel();
         int toolCallCount = 0;
-        boolean streamingStarted = false;
         String thinking = "";
         long totalInputTokens = 0;
         long totalOutputTokens = 0;
 
-        logger.info("开始执行工具调用流程（流式），当前消息数: {}", messages.size());
+        logger.info("开始执行工具调用流程，当前消息数: {}", messages.size());
 
         while (toolCallCount < MAX_TOOL_CALLS) {
             try {
@@ -477,8 +503,9 @@ public class DeepSeekProxyController {
 
                 // 传递工具定义
                 Map<String, Object> requestBody = buildRequestBody(currentModel, messages, true, enableWebSearch);
-                String response = callDeepSeekApi(requestBody);
 
+                // 同步调用 DeepSeek API
+                String response = callDeepSeekApi(requestBody);
                 JsonNode root = objectMapper.readTree(response);
 
                 // 统计Token使用量
@@ -491,8 +518,7 @@ public class DeepSeekProxyController {
                 JsonNode choice = root.path("choices").get(0);
                 JsonNode message = choice.path("message");
 
-                logger.info("第 {} 轮响应: tool_calls present={}",
-                        toolCallCount + 1, message.has("tool_calls"));
+                logger.info("第 {} 轮响应: tool_calls present={}", toolCallCount + 1, message.has("tool_calls"));
 
                 // 获取思考过程
                 if (enableDeepThink && toolCallCount == 0) {
@@ -555,13 +581,14 @@ public class DeepSeekProxyController {
                     continue;
                 }
 
-                // 没有工具调用，流式输出
+                // 没有工具调用，发送内容
                 String content = message.path("content").asText("");
                 logger.info("无工具调用，返回内容长度: {}", content.length());
 
                 // 发送思考过程（第一轮）
-                if (enableDeepThink && toolCallCount == 0 && !thinking.isEmpty() && !streamingStarted) {
+                if (enableDeepThink && toolCallCount == 0 && !thinking.isEmpty()) {
                     try {
+                        logger.info("发送 SSE reasoning 事件，内容长度: {}", thinking.length());
                         emitter.send(SseEmitter.event().name("reasoning")
                                 .data("{\"reasoning\": " + escapeJson(thinking) + "}"));
                     } catch (IOException e) {
@@ -569,10 +596,10 @@ public class DeepSeekProxyController {
                     }
                 }
 
-                // 流式发送内容
+                // 发送完整内容（前端打字机效果逐字显示）
                 if (!content.isEmpty()) {
                     try {
-                        streamingStarted = true;
+                        logger.info("发送 SSE token 事件，内容长度: {}", content.length());
                         emitter.send(SseEmitter.event().name("token")
                                 .data("{\"token\": " + escapeJson(content) + "}"));
                     } catch (IOException e) {
@@ -584,7 +611,6 @@ public class DeepSeekProxyController {
                 if (userId != null) {
                     boolean consumed = apiUsageService.consumeTokens(userId, totalInputTokens, totalOutputTokens);
                     if (!consumed) {
-                        // Token不足，发送错误并关闭连接
                         logger.warn("用户 {} Token不足，关闭连接", userId);
                         try {
                             emitter.send(SseEmitter.event().name("error")
@@ -598,16 +624,19 @@ public class DeepSeekProxyController {
                     }
                     logger.info("用户 {} 消耗 tokens: 输入 {}, 输出 {}", userId, totalInputTokens, totalOutputTokens);
 
-                    // 获取更新后的配额并发送
+                    // 发送配额信息
                     ApiUsage userQuota = apiUsageService.getUserQuota(userId);
                     try {
                         String quotaData = String.format("{\"quota\":{\"tokensRemaining\":%d,\"searchRemaining\":%d}}",
                                 userQuota.getTokensRemaining() != null ? userQuota.getTokensRemaining() : 0,
                                 userQuota.getSearchRemaining() != null ? userQuota.getSearchRemaining() : 0);
+                        logger.info("发送 SSE quota 事件: tokensRemaining={}, searchRemaining={}",
+                                userQuota.getTokensRemaining(), userQuota.getSearchRemaining());
                         emitter.send(SseEmitter.event().name("quota").data(quotaData));
 
                         String warning = apiUsageService.getQuotaWarning(userId, enableWebSearch);
                         if (warning != null) {
+                            logger.info("发送 SSE warning 事件: {}", warning);
                             emitter.send(SseEmitter.event().name("warning")
                                     .data("{\"warning\": " + escapeJson(warning) + "}"));
                         }
@@ -619,6 +648,8 @@ public class DeepSeekProxyController {
                 // 完成
                 heartbeatScheduler.shutdown();
                 try {
+                    logger.info("发送 SSE complete 事件");
+                    logger.info("========== SSE 流式请求正常结束 ==========");
                     emitter.send(SseEmitter.event().name("complete").data("{\"type\": \"complete\"}"));
                     emitter.complete();
                 } catch (IOException e) {
@@ -627,22 +658,28 @@ public class DeepSeekProxyController {
                 return;
 
             } catch (Exception e) {
-                logger.error("工具调用流程错误", e);
+                logger.error("工具调用流程错误: {}", e.getMessage(), e);
                 try {
+                    logger.info("发送 SSE error 事件");
                     emitter.send(SseEmitter.event().name("error")
                             .data("{\"error\": " + escapeJson(e.getMessage()) + "}"));
                 } catch (IOException ex) {
                     logger.error("发送错误事件失败", ex);
                 }
                 emitter.completeWithError(e);
+                logger.info("========== SSE 流式请求异常结束 ==========");
                 return;
             }
         }
 
+        // 工具调用次数过多
         try {
+            logger.warn("工具调用次数超过上限: {}", MAX_TOOL_CALLS);
+            logger.info("发送 SSE error 事件（工具调用过多）");
             emitter.send(SseEmitter.event().name("error").data("{\"error\": \"工具调用次数过多\"}"));
             emitter.complete();
         } catch (IOException e) {
+            logger.error("发送工具调用过多错误失败", e);
             emitter.completeWithError(e);
         }
     }

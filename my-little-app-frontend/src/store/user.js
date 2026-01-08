@@ -12,8 +12,25 @@ const state = reactive({
 
 // 初始化 - 从本地存储恢复状态
 const init = () => {
-  const userInfo = uni.getStorageSync('userInfo')
-  
+  // 多次尝试读取 storage，确保数据已写入
+  let userInfo = null
+  let retries = 3
+
+  while (retries > 0) {
+    try {
+      userInfo = uni.getStorageSync('userInfo')
+      if (userInfo) break
+    } catch (e) {
+      console.log('getStorageSync failed, retries left:', retries)
+    }
+    retries--
+    // 短暂延迟后重试
+    if (retries > 0) {
+      const start = Date.now()
+      while (Date.now() - start < 50) {}
+    }
+  }
+
   if (userInfo) {
     state.isLogin = true
     state.userInfo = userInfo
@@ -24,24 +41,25 @@ const init = () => {
 const login = async (username, password) => {
   try {
     const res = await authApi.login(username, password)
-    
+
     if (res.success) {
       state.isLogin = true
       state.userInfo = res.data
-      
-      // 保存到本地存储
-      uni.setStorageSync('userInfo', res.data)
-      
-      // 登录成功后尝试获取完整用户信息（失败不影响登录结果）
+
+      // 强制同步存储，确保数据立即可用
       try {
+        uni.setStorageSync('userInfo', res.data)
+        // 尝试刷新数据并更新存储
         await fetchUserInfo()
       } catch (e) {
-        console.log('fetchUserInfo after login error:', e)
+        console.log('Storage or fetchUserInfo error:', e)
+        // 确保 storage 有数据
+        uni.setStorageSync('userInfo', res.data)
       }
-      
+
       return { success: true, data: state.userInfo }
     }
-    
+
     return { success: false, message: res.message }
   } catch (error) {
     return { success: false, message: error.message || '登录失败' }
@@ -115,7 +133,7 @@ const checkLoginStatus = async () => {
   if (!state.isLogin) {
     return false
   }
-  
+
   try {
     const res = await authApi.checkLogin()
     if (!res.success || !res.data) {
@@ -130,8 +148,8 @@ const checkLoginStatus = async () => {
   }
 }
 
-// 初始化
-init()
+// 不在模块加载时自动 init，改为在 App launch/show 和页面 onShow 时调用
+// init()
 
 export default {
   state,

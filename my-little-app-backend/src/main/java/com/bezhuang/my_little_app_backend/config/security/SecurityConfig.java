@@ -87,6 +87,7 @@ public class SecurityConfig {
                 // 公开接口
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/thoughts/**").permitAll()
                 .requestMatchers("/error").permitAll()
 
                 // 公开图片数据接口（无需认证，用于前端显示）
@@ -153,12 +154,16 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // 从配置文件读取允许的域名
+        boolean allowAll = false;
         if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
             List<String> origins = Arrays.asList(allowedOrigins.split(","));
             for (String origin : origins) {
                 String trimmed = origin.trim();
                 if (!trimmed.isEmpty()) {
-                    if (trimmed.endsWith(":*")) {
+                    if (trimmed.equals("*")) {
+                        allowAll = true;
+                        configuration.addAllowedOriginPattern("*");
+                    } else if (trimmed.endsWith(":*")) {
                         // 支持通配符模式（如 http://localhost:*）
                         configuration.addAllowedOriginPattern(trimmed);
                     } else {
@@ -169,10 +174,13 @@ public class SecurityConfig {
         } else {
             // 默认允许所有来源
             configuration.addAllowedOriginPattern("*");
+            allowAll = true;
         }
 
-        // 允许携带 Cookie
-        configuration.setAllowCredentials(true);
+        // 允许携带 Cookie（但 * 通配符时不能设置）
+        if (!allowAll) {
+            configuration.setAllowCredentials(true);
+        }
         // 允许所有请求头
         configuration.addAllowedHeader("*");
         // 允许的 HTTP 方法

@@ -3,75 +3,75 @@ import { ref, computed } from 'vue'
 
 const tools = ref([
   {
+    id: 'opinion',
+    name: '观点',
+    iconChar: '📝',
+    description: 'Bezhuang的长文写作',
+    color: '#25b864',
+    url: 'https://www.yuque.com/bezhuang/writing'
+  },
+  {
     id: 'unit',
     name: '开发环境配置',
-    icon: 'Switch',
+    iconChar: '⚙️',
     description: '语雀文档',
     color: '#DDA0DD',
-    url: 'https://www.yuque.com/bezhuang/knowledge/qq096ivi8gkvux83',
-    favicon: 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23DDA0DD\'><path d=\'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z\'/></svg>'
+    url: 'https://www.yuque.com/bezhuang/knowledge/qq096ivi8gkvux83'
   },
   {
     id: 'index-valuation',
     name: '指数估值',
-    icon: 'PieChart',
+    iconChar: '📈',
     description: '基金估值',
     color: '#FF6B6B',
-    url: 'https://danjuanfunds.com/djmodule/value-center',
-    favicon: 'https://danjuanfunds.com/favicon.ico'
+    url: 'https://danjuanfunds.com/djmodule/value-center'
   },
   {
     id: 'whiteboard',
     name: '白板',
-    icon: 'Edit',
+    iconChar: '✏️',
     description: '绘图工具',
     color: '#4ECDC4',
-    url: 'https://excalidraw.com',
-    favicon: 'https://excalidraw.com/favicon.ico'
+    // #ifdef MP-WEIXIN
+    url: 'https://app.diagrams.net/'
+    // #endif
+    // #ifndef MP-WEIXIN
+    url: 'https://excalidraw.com/'
+    // #endif
   },
   {
     id: 'metronome',
     name: '节拍器',
-    icon: 'Time',
+    iconChar: '🎵',
     description: '在线节拍器',
     color: '#FF6B6B',
-    url: 'https://metronome-online.com/zh',
-    favicon: 'https://metronome-online.com/favicon.ico'
+    url: 'https://metronome-online.com/zh'
   },
   {
     id: 'calendar',
     name: '日历',
-    icon: 'Calendar',
+    iconChar: '📅',
     description: '查看日期',
-    color: '#4ECDC4',
-    favicon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234ECDC4"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>'
-  },
-  {
-    id: 'stopwatch',
-    name: '秒表',
-    icon: 'Time',
-    description: '计时工具',
-    color: '#FF6B6B',
-    favicon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23FF6B6B"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>'
+    color: '#4ECDC4'
   },
   {
     id: 'notes',
     name: '备忘录',
-    icon: 'Notebook',
+    iconChar: '📝',
     description: '快速记录',
     color: '#45B7D1'
   },
   {
     id: 'qrcode',
     name: '二维码',
-    icon: 'Scan',
+    iconChar: '📱',
     description: '生成二维码',
     color: '#96CEB4'
   },
   {
     id: 'password',
     name: '密码生成',
-    icon: 'Lock',
+    iconChar: '🔐',
     description: '安全密码',
     color: '#FFEAA7'
   }
@@ -197,8 +197,10 @@ const handleToolClick = (tool) => {
     currentTool.value = tool
     showStopwatch.value = true
   } else if (tool.url) {
-    currentTool.value = tool
-    showWebView.value = true
+    // 跳转到 webview 页面，小程序会自动显示返回按钮
+    uni.navigateTo({
+      url: `/pages/webview/index?url=${encodeURIComponent(tool.url)}&title=${encodeURIComponent(tool.name)}`
+    })
   } else {
     uni.showToast({
       title: `${tool.name} 功能开发中`,
@@ -238,14 +240,14 @@ const reloadPage = () => {
         class="tool-card"
         @click="handleToolClick(tool)"
       >
-        <div class="tool-icon" :style="{ background: tool.color + '20', color: tool.color }">
+        <div class="tool-icon" :style="{ background: tool.color + '20' }">
           <img
             v-if="tool.favicon"
             :src="tool.favicon"
             class="tool-logo"
             :alt="tool.name"
           />
-          <uni-icons v-else :type="tool.icon" size="28" :color="tool.color"></uni-icons>
+          <text v-else class="tool-icon-text">{{ tool.iconChar }}</text>
         </div>
         <div class="tool-info">
           <div class="tool-name">{{ tool.name }}</div>
@@ -254,7 +256,8 @@ const reloadPage = () => {
       </div>
     </div>
 
-    <!-- 网页嵌入层 -->
+    <!-- #ifndef MP-WEIXIN -->
+    <!-- 网页嵌入层 - H5 使用 iframe -->
     <div v-if="showWebView" class="webview-overlay">
       <div class="webview-container">
         <div class="webview-header">
@@ -280,6 +283,7 @@ const reloadPage = () => {
         ></iframe>
       </div>
     </div>
+    <!-- #endif -->
 
     <!-- 日历弹窗 -->
     <div v-if="showCalendar" class="calendar-overlay">
@@ -366,6 +370,11 @@ const reloadPage = () => {
   min-height: 100vh;
   background: #f5f5f5;
   padding: 16px;
+  padding-top: calc(120px + env(safe-area-inset-top));
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -439,6 +448,11 @@ const reloadPage = () => {
   color: #999;
 }
 
+.tool-icon-text {
+  font-size: 28px;
+  line-height: 1;
+}
+
 // 网页嵌入层
 .webview-overlay {
   position: fixed;
@@ -452,7 +466,7 @@ const reloadPage = () => {
 
 .webview-container {
   position: absolute;
-  top: 20px;
+  top: calc(60px + env(safe-area-inset-top));
   left: 4px;
   right: 4px;
   bottom: 20px;

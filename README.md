@@ -265,7 +265,7 @@ pnpm install
 ```bash
 # 后端服务
 cd my-little-app-backend
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Pdev
 
 # 移动端 H5
 cd my-little-app-frontend

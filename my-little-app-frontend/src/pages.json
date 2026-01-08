@@ -10,16 +10,14 @@
 		"navigationBarTitleText": "我的小应用",
 		"navigationBarBackgroundColor": "#FFFFFF",
 		"backgroundColor": "#F5F5F5",
-		"rpxCalcMaxDeviceWidth": 1024,
-		"rpxCalcBaseDeviceWidth": 375,
-		"rpxCalcEnable": true,
 		"maxWidth": 1200
 	},
 	"pages": [
 		{
 			"path": "pages/blog/index",
 			"style": {
-				"navigationBarTitleText": "想法"
+				"navigationBarTitleText": "想法",
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -84,7 +82,12 @@
 		"selectedColor": "#4CD964",
 		"borderStyle": "black",
 		"backgroundColor": "#ffffff",
-		"fontSize": "18px",
+		// #ifdef MP-WEIXIN
+		"fontSize": "16px",
+		// #endif
+		// #ifndef MP-WEIXIN
+		"fontSize": "14px",
+		// #endif
 		"list": [
 			{
 				"pagePath": "pages/blog/index",

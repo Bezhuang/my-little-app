@@ -31,6 +31,7 @@ const request = (options) => {
     uni.request({
       url: API_BASE_URL + options.url,
       method: options.method || 'GET',
+      timeout: options.timeout || 10000, // 默认10秒超时
       data: options.data || {},
       header: {
         'Content-Type': options.contentType || 'application/json',

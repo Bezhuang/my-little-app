@@ -73,7 +73,7 @@
       </view>
     </scroll-view>
 
-    <!-- 输入区域 -->
+    <!-- 输入区域 - 固定在底部导航栏上方 -->
     <view class="input-area">
       <!-- 深度思考、联网搜索和清空按钮行 -->
       <view class="deep-think-row">
@@ -399,7 +399,11 @@ const refreshScrollView = async () => {
 // 滚动到底部（带自动刷新和多次尝试）
 const scrollToBottom = async () => {
   await nextTick()
-  await new Promise(resolve => setTimeout(resolve, 50))
+  await new Promise(resolve => setTimeout(resolve, 30))
+
+  // 先清空 scroll-into-view，再设置，强制触发更新
+  scrollToView.value = ''
+  await nextTick()
 
   // 使用 scroll-into-view 滚动到最后一个消息
   const lastIndex = messages.value.length - 1
@@ -407,11 +411,17 @@ const scrollToBottom = async () => {
     scrollToView.value = 'msg-' + lastIndex
   }
 
-  // 多次尝试确保滚动成功
-  for (let i = 0; i < 3; i++) {
-    await new Promise(resolve => setTimeout(resolve, 50 + i * 30))
-    scrollTop.value = 999999
+  await nextTick()
+  await new Promise(resolve => setTimeout(resolve, 50))
+
+  // 多次尝试使用 scrollTop 确保滚动成功（使用更大的值确保到底）
+  for (let i = 0; i < 5; i++) {
+    scrollTop.value = 9999999 // 使用更大的值确保滚动到底部
+    await new Promise(resolve => setTimeout(resolve, 30 + i * 20))
   }
+
+  // 最后再额外滚动 100px 确保完全显示（考虑底部 padding）
+  scrollTop.value = 9999999 + 100
 }
 
 // 发送消息
@@ -501,6 +511,21 @@ const sendMessage = async () => {
       messages.value.splice(lastIndex, 1)
     }
 
+    // 检查是否是未登录错误
+    if (error.message === '未登录或登录已过期') {
+      uni.showModal({
+        title: '提示',
+        content: '登录已过期，请重新登录',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            uni.navigateTo({ url: '/pages/login/index' })
+          }
+        }
+      })
+      return
+    }
+
     // 弹出错误提示框
     uni.showModal({
       title: '提示',
@@ -519,7 +544,7 @@ const sendMessage = async () => {
   await scrollToBottom()
 }
 
-// 发送消息（普通请求 + 前端打字机效果）
+// 发送消息（默认使用同步接口）
 const streamMessage = async (conversationId, messageHistory, aiMsg) => {
   const requestBody = {
     messages: messageHistory,
@@ -527,14 +552,20 @@ const streamMessage = async (conversationId, messageHistory, aiMsg) => {
     enableWebSearch: enableWebSearch.value
   }
 
-  // 直接使用同步请求，然后在前端实现打字机效果
+  // 检查认证状态
+  const token = getToken()
+  if (!token) {
+    throw new Error('未登录或登录已过期')
+  }
+
+  // 默认使用同步接口
   await syncRequest(requestBody, aiMsg, conversationId)
 }
 
 // 打字机效果：逐字显示文本
 const typeWriter = async (text, callback) => {
   let displayedText = ''
-  const typingSpeed = 50 // 打字速度（毫秒），越小越快
+  const typingSpeed = 30 // 打字速度（毫秒）
   let scrollCounter = 0
 
   for (let i = 0; i < text.length; i++) {
@@ -545,11 +576,12 @@ const typeWriter = async (text, callback) => {
       messages.value[lastIndex].content = displayedText
       messages.value = [...messages.value]
     }
-    // 每 50 个字符滚动一次，避免过于频繁
+    // 每 10 个字符滚动一次
     scrollCounter++
-    if (scrollCounter >= 50) {
+    if (scrollCounter >= 10) {
       scrollCounter = 0
-      await scrollToBottom()
+      // 使用 scrollTop 强制滚动到底部（比 scroll-into-view 更可靠）
+      scrollTop.value = 9999999
     }
     // 延迟
     await new Promise(resolve => setTimeout(resolve, typingSpeed))
@@ -578,21 +610,33 @@ const showMaxRoundsWarning = () => {
   })
 }
 
-// 同步请求（带前端打字机效果）
+// 同步请求（带前端打字机效果）- 兼容小程序和H5
 const syncRequest = async (requestBody, aiMsg, conversationId) => {
   try {
     const token = getToken()
-    const response = await fetch(`${BASE_URL}/api/ai/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        'Authorization': token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify(requestBody)
+
+    // 小程序和H5统一的请求方式
+    const responseText = await new Promise((resolve, reject) => {
+      uni.request({
+        url: `${BASE_URL}/api/ai/chat`,
+        method: 'POST',
+        timeout: 60000, // 60秒超时
+        header: {
+          'Content-Type': 'application/json;charset=utf-8',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        data: requestBody,
+        success: (res) => {
+          if (res.statusCode === 200) {
+            resolve(typeof res.data === 'string' ? res.data : JSON.stringify(res.data))
+          } else {
+            reject(new Error(`请求失败: ${res.statusCode}`))
+          }
+        },
+        fail: reject
+      })
     })
 
-    // 先获取文本，确保编码正确
-    const responseText = await response.text()
     // 尝试解析 JSON
     let data
     try {
@@ -653,7 +697,7 @@ const syncRequest = async (requestBody, aiMsg, conversationId) => {
 
       // 思考过程打字机效果
       let displayedThinking = ''
-      const thinkingSpeed = 50
+      const thinkingSpeed = 30
       let scrollCounter = 0
       for (let i = 0; i < thinkingContent.length; i++) {
         displayedThinking += thinkingContent[i]
@@ -661,11 +705,11 @@ const syncRequest = async (requestBody, aiMsg, conversationId) => {
           messages.value[lastIndex].thinking = displayedThinking
           messages.value = [...messages.value]
         }
-        // 每 50 个字符滚动一次
+        // 每 10 个字符滚动一次
         scrollCounter++
-        if (scrollCounter >= 50) {
+        if (scrollCounter >= 10) {
           scrollCounter = 0
-          await scrollToBottom()
+          scrollTop.value = 9999999
         }
         await new Promise(resolve => setTimeout(resolve, thinkingSpeed))
       }
@@ -737,46 +781,50 @@ page {
   align-items: center;
   justify-content: space-between;
   padding: 30rpx;
-  padding-top: calc(30rpx + env(safe-area-inset-top));
+  padding-top: calc(80rpx + env(safe-area-inset-top));
+  padding-left: calc(30rpx + env(safe-area-inset-left));
+  padding-right: calc(30rpx + env(safe-area-inset-right));
+  padding-bottom: 30rpx;
   background-color: #fff;
   border-bottom: 1rpx solid #eee;
   flex-shrink: 0;
   flex: 0 0 auto;
-
-  .header-left {
-    flex: 1;
-
-    .chat-title {
-      display: block;
-      font-size: 36rpx;
-      font-weight: bold;
-      color: #333;
-    }
-
-    .chat-subtitle {
-      display: block;
-      font-size: 24rpx;
-      color: #999;
-      margin-top: 8rpx;
-    }
-  }
-
-  .header-right {
-    padding: 10rpx;
-
-    .close-icon {
-      font-size: 32rpx;
-      color: #999;
-    }
-  }
 }
 
-/* 消息区域 - 只占中间空间，可滚动 */
+.chat-header .header-left {
+  flex: 1;
+}
+
+.chat-header .header-left .chat-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.chat-header .header-left .chat-subtitle {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+.chat-header .header-right {
+  padding: 10rpx;
+}
+
+.chat-header .header-right .close-icon {
+  font-size: 32rpx;
+  color: #999;
+}
+
+/* 消息区域 - 占满中间空间 */
 .messages-container {
   flex: 1;
   width: 100%;
   min-height: 0;
   padding: 20rpx;
+  padding-bottom: calc(250rpx + env(safe-area-inset-bottom));
   background-color: #f5f5f5;
   overflow-y: auto;
 
@@ -998,15 +1046,32 @@ page {
   }
 }
 
-/* 输入区域 - 固定在底部，不随滚动 */
+/* 输入区域 - 固定在底部导航栏上方（小程序使用 10px） */
 .input-area {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 50px;
   background-color: #f5f5f5;
-  padding: 20rpx;
-  padding-left: 20rpx;
-  padding-right: 20rpx;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  padding: 12rpx 20rpx;
+  padding-left: calc(20rpx + env(safe-area-inset-left));
+  padding-right: calc(20rpx + env(safe-area-inset-right));
+  padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid #eee;
-  flex: 0 0 auto;
+  z-index: 100;
+}
+
+/* #ifdef MP-WEIXIN */
+.input-area {
+  bottom: 10px;
+}
+/* #endif */
+
+/* PC端适配 */
+@media screen and (min-width: 768px) {
+  .input-area {
+    bottom: calc(50px + env(safe-area-inset-bottom));
+  }
 }
 
 /* 深度思考行 */
@@ -1014,7 +1079,7 @@ page {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  margin-bottom: 16rpx;
+  margin-bottom: 8rpx;
 }
 
 .deep-think-btn {

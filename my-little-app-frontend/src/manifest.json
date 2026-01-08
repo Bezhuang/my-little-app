@@ -1,15 +1,15 @@
 {
     "name" : "我的小应用",
-    "appid" : "",
+    "appid" : "__UNI__6FEE0EA",
     "description" : "",
     "versionName" : "1.0.0",
     "versionCode" : "100",
     "transformPx" : false,
-    "networkTimeout": {
-        "request": 10000,
-        "connectSocket": 10000,
-        "uploadFile": 10000,
-        "downloadFile": 10000
+    "networkTimeout" : {
+        "request" : 10000,
+        "connectSocket" : 10000,
+        "uploadFile" : 10000,
+        "downloadFile" : 10000
     },
     "app-plus" : {
         "usingComponents" : true,
@@ -21,8 +21,8 @@
             "autoclose" : true,
             "delay" : 0
         },
-        "globalStyle": {
-            "navigationBarTextStyle": "black",
+        "globalStyle" : {
+            "navigationBarTextStyle" : "black",
             "navigationBarTitleText" : "我的小应用",
             "navigationBarBackgroundColor" : "#FFFFFF",
             "backgroundColor" : "#F5F5F5"
@@ -30,9 +30,11 @@
     },
     "quickapp" : {},
     "mp-weixin" : {
-        "appid" : "",
+        "appid" : "wxaf075f18cad9d602",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "postcss" : true,
+            "minified" : true
         },
         "usingComponents" : true
     },
@@ -45,8 +47,8 @@
     "mp-toutiao" : {
         "usingComponents" : true
     },
-    "uniStatistics": {
-        "enable": false
+    "uniStatistics" : {
+        "enable" : false
     },
     "vueVersion" : "3"
 }

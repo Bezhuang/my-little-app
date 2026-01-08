@@ -3,7 +3,7 @@
  */
 
 // API 服务器地址
-const BASE_URL = 'http://117.72.207.170:8080'
+const BASE_URL = 'http://localhost:8080'
 
 export {
   BASE_URL

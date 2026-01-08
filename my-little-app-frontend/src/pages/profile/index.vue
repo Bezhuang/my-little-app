@@ -32,7 +32,8 @@
           @click="onActionItemClick(action)"
         >
           <view class="action-icon-wrapper" :style="{ background: action.color + '20' }">
-            <uni-icons :type="action.icon" size="28" :color="action.color"></uni-icons>
+            <uni-icons v-if="action.icon" :type="action.icon" size="28" :color="action.color"></uni-icons>
+            <view v-else-if="action.iconChar" class="action-icon-text">{{ action.iconChar }}</view>
           </view>
           <text class="action-text">{{ action.name }}</text>
         </view>
@@ -77,8 +78,9 @@ import { onShow } from '@dcloudio/uni-app'
 import userStore from '../../store/user'
 
 const quickActions = ref([
-  { icon: 'compose', name: '写作', type: 'link', url: 'https://www.yuque.com/bezhuang/writing', color: '#25b864' },
-  { icon: 'notification', name: '消息通知', type: 'notifications', color: '#667eea' }
+  { iconChar: '💻', name: '关于开发者', type: 'link', url: 'https://bezhuang.cn', color: '#24292e' },
+  { iconChar: '📧', name: '联系开发者', type: 'mailto', url: 'mailto:13818993049@163.com', color: '#667eea' },
+  { iconChar: '🔔', name: '消息通知', type: 'notifications', color: '#667eea' }
 ])
 
 const menuList = ref([
@@ -118,6 +120,22 @@ const onActionItemClick = (action) => {
     uni.navigateTo({
       url: `/pages/webview/index?url=${encodeURIComponent(action.url)}&title=${encodeURIComponent(action.name)}`
     })
+    return
+  }
+
+  // 邮件类型
+  if (action.type === 'mailto') {
+    // #ifdef H5
+    window.location.href = action.url
+    // #endif
+    // #ifdef MP-WEIXIN
+    uni.setClipboardData({
+      data: action.url.replace('mailto:', ''),
+      success: () => {
+        uni.showToast({ title: '邮箱已复制', icon: 'none' })
+      }
+    })
+    // #endif
     return
   }
 
@@ -317,6 +335,11 @@ page {
 .action-text {
   font-size: 26rpx;
   color: #333;
+}
+
+.action-icon-text {
+  font-size: 28px;
+  line-height: 1;
 }
 
 .menu-wrapper {

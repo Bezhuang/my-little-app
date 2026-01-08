@@ -1,5 +1,13 @@
 <template>
   <view class="moments-page">
+    <!-- 顶部栏 -->
+    <view class="blog-header">
+      <view class="header-left">
+        <text class="blog-title">想法</text>
+        <text class="blog-subtitle">分享生活点滴</text>
+      </view>
+    </view>
+
     <!-- 想法列表 -->
     <scroll-view
       scroll-y
@@ -44,11 +52,15 @@
       </view>
 
       <!-- 加载状态 -->
-      <uni-load-more
-        v-if="thoughts.length > 0"
-        :status="loadStatus"
-        :content-text="loadTextConfig"
-      />
+      <view v-if="thoughts.length > 0" class="load-more">
+        <view v-if="loadStatus === 'loading'" class="loading">
+          <view class="loading-dot"></view>
+          <view class="loading-dot"></view>
+          <view class="loading-dot"></view>
+        </view>
+        <text v-else-if="loadStatus === 'noMore'" class="load-text">没有更多了</text>
+        <text v-else class="load-text">上拉加载更多</text>
+      </view>
 
       <!-- 空状态 -->
       <view v-if="thoughts.length === 0 && !loading" class="empty-state">
@@ -74,12 +86,6 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const scrollTop = ref(0) // 滚动位置
 const initialized = ref(false) // 标记是否已初始化
-
-const loadTextConfig = {
-  contentdown: '上拉加载更多',
-  contentrefresh: '加载中...',
-  contentnomore: '没有更多了'
-}
 
 const loadStatus = computed(() => {
   if (loading.value) return 'loading'
@@ -204,10 +210,48 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+// 顶部栏 - 全屏覆盖
+.blog-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 30rpx;
+  padding-top: calc(env(safe-area-inset-top) + 60rpx);
+  padding-left: calc(30rpx + env(safe-area-inset-left));
+  padding-right: calc(30rpx + env(safe-area-inset-right));
+  padding-bottom: 20rpx;
+  background-color: #fff;
+  border-bottom: 1rpx solid #eee;
+  z-index: 999;
+}
+
+.blog-header .header-left {
+  flex: 1;
+}
+
+.blog-header .header-left .blog-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.blog-header .header-left .blog-subtitle {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
 .moments-page {
   min-height: 100vh;
   background-color: #f5f5f5;
   padding: 20rpx;
+  padding-top: calc(210rpx + env(safe-area-inset-top));
   padding-bottom: 40rpx;
 }
 
@@ -287,5 +331,55 @@ onMounted(() => {
   font-size: 24rpx;
   color: #bbb;
   margin-top: 10rpx;
+}
+
+// 加载更多
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+}
+
+.load-text {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.loading-dot {
+  width: 16rpx;
+  height: 16rpx;
+  background-color: #999;
+  border-radius: 50%;
+  animation: loadingPulse 1.4s infinite ease-in-out;
+
+  &:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+
+@keyframes loadingPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>

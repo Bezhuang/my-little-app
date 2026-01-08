@@ -1,153 +1,135 @@
 /**
- * IndexedDB 工具类 - 用于本地存储 AI 对话历史
+ * 本地存储工具类 - 用于存储 AI 对话历史
+ * 兼容 H5 和微信小程序环境
  */
 
-const DB_NAME = 'BezhuangAI'
-const DB_VERSION = 1
-const STORE_NAME = 'conversations'
+// 检测是否在微信小程序环境中
+const isMP = typeof uni !== 'undefined' && uni.getSystemInfoSync
 
-let db = null
+const STORAGE_KEY = 'bezhuang_ai_conversations'
 
-/**
- * 打开数据库
- */
-export const openDB = () => {
-  return new Promise((resolve, reject) => {
-    if (db) {
-      resolve(db)
-      return
-    }
-
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = () => {
-      reject(new Error('打开数据库失败'))
-    }
-
-    request.onsuccess = (event) => {
-      db = event.target.result
-      resolve(db)
-    }
-
-    request.onupgradeneeded = (event) => {
-      const database = event.target.result
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true })
-        store.createIndex('updatedAt', 'updatedAt', { unique: false })
-      }
-    }
-  })
-}
+let conversationsCache = null
 
 /**
- * 保存对话
- */
-export const saveConversation = async (conversation) => {
-  const database = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    conversation.updatedAt = new Date().toISOString()
-
-    const request = store.put(conversation)
-
-    request.onsuccess = () => {
-      resolve(request.result)
-    }
-
-    request.onerror = () => {
-      reject(new Error('保存对话失败'))
-    }
-  })
-}
-
-/**
- * 获取所有对话
+ * 从本地存储获取所有对话
  */
 export const getAllConversations = async () => {
-  const database = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
-    const index = store.index('updatedAt')
-
-    const request = index.getAll()
-
-    request.onsuccess = () => {
-      // 按更新时间降序排序
-      const conversations = request.result.sort((a, b) =>
-        new Date(b.updatedAt) - new Date(a.updatedAt)
-      )
-      resolve(conversations)
+  try {
+    // 优先使用缓存
+    if (conversationsCache) {
+      return conversationsCache
     }
 
-    request.onerror = () => {
-      reject(new Error('获取对话列表失败'))
+    let data = null
+
+    if (isMP) {
+      // 微信小程序环境
+      data = uni.getStorageSync(STORAGE_KEY)
+    } else {
+      // H5 环境
+      data = localStorage.getItem(STORAGE_KEY)
     }
-  })
+
+    conversationsCache = data ? JSON.parse(data) : []
+
+    // 按更新时间降序排序
+    return conversationsCache.sort((a, b) =>
+      new Date(b.updatedAt) - new Date(a.updatedAt)
+    )
+  } catch (error) {
+    console.error('获取对话列表失败:', error)
+    return []
+  }
 }
 
 /**
  * 获取单个对话
  */
 export const getConversation = async (id) => {
-  const database = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_NAME], 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
+  try {
+    const conversations = await getAllConversations()
+    return conversations.find(c => c.id === id) || null
+  } catch (error) {
+    console.error('获取对话失败:', error)
+    return null
+  }
+}
 
-    const request = store.get(id)
+/**
+ * 保存对话（新增或更新）
+ */
+export const saveConversation = async (conversation) => {
+  try {
+    const conversations = await getAllConversations()
+    const now = new Date().toISOString()
+    conversation.updatedAt = now
 
-    request.onsuccess = () => {
-      resolve(request.result)
+    if (conversation.id) {
+      // 更新现有对话
+      const index = conversations.findIndex(c => c.id === conversation.id)
+      if (index !== -1) {
+        conversations[index] = conversation
+      } else {
+        conversations.unshift(conversation)
+      }
+    } else {
+      // 新建对话
+      conversation.id = Date.now().toString()
+      conversation.createdAt = now
+      conversations.unshift(conversation)
     }
 
-    request.onerror = () => {
-      reject(new Error('获取对话失败'))
+    conversationsCache = conversations
+
+    if (isMP) {
+      uni.setStorageSync(STORAGE_KEY, JSON.stringify(conversations))
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
     }
-  })
+
+    return conversation.id
+  } catch (error) {
+    console.error('保存对话失败:', error)
+    throw error
+  }
 }
 
 /**
  * 删除对话
  */
 export const deleteConversation = async (id) => {
-  const database = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+  try {
+    let conversations = await getAllConversations()
+    conversations = conversations.filter(c => c.id !== id)
+    conversationsCache = conversations
 
-    const request = store.delete(id)
-
-    request.onsuccess = () => {
-      resolve()
+    if (isMP) {
+      uni.setStorageSync(STORAGE_KEY, JSON.stringify(conversations))
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations))
     }
-
-    request.onerror = () => {
-      reject(new Error('删除对话失败'))
-    }
-  })
+  } catch (error) {
+    console.error('删除对话失败:', error)
+    throw error
+  }
 }
 
 /**
  * 清空所有对话
  */
 export const clearAllConversations = async () => {
-  const database = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_NAME], 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
+  try {
+    conversationsCache = []
 
-    const request = store.clear()
-
-    request.onsuccess = () => {
-      resolve()
+    if (isMP) {
+      uni.removeStorageSync(STORAGE_KEY)
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
     }
-
-    request.onerror = () => {
-      reject(new Error('清空对话失败'))
-    }
-  })
+  } catch (error) {
+    console.error('清空对话失败:', error)
+    throw error
+  }
 }
 
 /**
@@ -158,9 +140,7 @@ export const createConversation = async (systemPrompt = null) => {
     title: '新对话',
     messages: [],
     maxMessages: 10,
-    systemPrompt: systemPrompt || '你是 Bezhuang AI，一个智能助手。请用简洁清晰的语言回答用户的问题。',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    systemPrompt: systemPrompt || '你是 Bezhuang AI，一个智能助手。请用简洁清晰的语言回答用户的问题。'
   }
   return await saveConversation(conversation)
 }
@@ -200,7 +180,7 @@ export const updateLastMessage = async (conversationId, content, reasoningConten
   }
 
   const lastMessage = conversation.messages[conversation.messages.length - 1]
-  if (lastMessage.role === 'assistant') {
+  if (lastMessage.role === 'assistant' || lastMessage.role === 1) {
     lastMessage.content = content
     if (reasoningContent) {
       lastMessage.reasoningContent = reasoningContent
@@ -211,7 +191,7 @@ export const updateLastMessage = async (conversationId, content, reasoningConten
 }
 
 export default {
-  openDB,
+  openDB: getAllConversations,
   saveConversation,
   getAllConversations,
   getConversation,
