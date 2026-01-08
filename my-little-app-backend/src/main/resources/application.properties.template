@@ -79,7 +79,7 @@ cors.allowed-origins=http://localhost:*,http://127.0.0.1:*,http://your-domain:*
 # 不配置或设置为 false 时，系统会自动降级为无缓存模式
 
 # 是否启用 Redis 缓存（true=启用，false=不启用/降级模式）
-redis.enabled=true
+redis.enabled=false
 
 # Redis 连接配置
 spring.data.redis.host=localhost

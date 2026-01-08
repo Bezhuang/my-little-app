@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { imageApi } from '../../utils/api'
-import { BASE_URL } from '../../utils/constants'
+import { BASE_URL } from '../../constant'
 
 const loading = ref(false)
 const uploadLoading = ref(false)

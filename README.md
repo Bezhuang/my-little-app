@@ -202,30 +202,31 @@ source /path/to/your/project/my-little-app-backend/src/main/resources/db/init.sq
 > init.sql 中 t_admin 表预置了超级管理员账号，相关信息（用户名、邮箱、密码（md5加密后））在数据库初始化时写入，**无法通过后台界面修改**。如需修改，请直接编辑 init.sql 文件后重新初始化数据库。
 
 
-### 2. 后端配置
+### 2. 敏感配置
+
+以下配置文件包含敏感信息，已加入 `.gitignore`，首次克隆项目后需要复制模板并填入真实值：
+
+| 项目          | 配置文件                                              | 说明                     |
+| ------------- | ----------------------------------------------------- | ------------------------ |
+| 后端          | `my-little-app-backend/src/main/resources/`           | 数据库连接、JWT 密钥等   |
+| 移动端前端    | `my-little-app-frontend/src/constant.js`              | API 地址、微信 AppID     |
+| 管理后台      | `my-little-app-admin/src/constant.js`                 | API 地址                 |
 
 ```bash
-# 复制配置模板
+# 后端配置
 cd my-little-app-backend/src/main/resources
 cp application.properties.template application.properties
 
-# 编辑配置（修改数据库连接、密钥等）
-vim application.properties
+# 移动端前端配置
+cd ../../../../my-little-app-frontend/src
+cp constant.js.template constant.js
+
+# 管理后台配置
+cd ../my-little-app-admin/src
+cp constant.js.template constant.js
 ```
 
-### 3. 前端配置（后端 API 地址）
-
-**admin** 和 **frontend** 访问后端的 `base_url` 都在 `@utils/constants.js` 文件中，按需修改：
-
-| 文件路径                                        | 配置项     |
-| ----------------------------------------------- | ---------- |
-| `my-little-app-admin/src/utils/constants.js`    | `BASE_URL` |
-| `my-little-app-frontend/src/utils/constants.js` | `BASE_URL` |
-
-```javascript
-// 开发环境示例
-export const BASE_URL = 'http://localhost:8080/api'
-```
+> **注意：** `constant.js` 包含微信小程序 AppID，切勿提交到版本控制。
 
 ## 环境要求
 

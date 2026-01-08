@@ -39,6 +39,12 @@ application-secret.yml
 *.jks
 
 # ====================
+# Sensitive Constants
+# ====================
+my-little-app-frontend/src/constant.js
+my-little-app-admin/src/constant.js
+
+# ====================
 # Logs
 # ====================
 *.log

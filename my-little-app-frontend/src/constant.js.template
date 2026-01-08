@@ -5,6 +5,9 @@
 // API 服务器地址
 const BASE_URL = 'http://localhost:8080'
 
+// 微信小程序 AppID
+export const WEIXIN_APPID = 'your-weixin-appid-here'
+
 export {
   BASE_URL
 }

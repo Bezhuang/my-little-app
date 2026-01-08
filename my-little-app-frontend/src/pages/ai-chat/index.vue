@@ -135,7 +135,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import userStore from '@/store/user'
 import { createConversation, getAllConversations, addMessageToConversation, clearAllConversations } from '@/utils/indexedDB'
-import { BASE_URL } from '@/utils/constants'
+import { BASE_URL } from '@/constant'
 
 // 状态
 const messages = ref([])

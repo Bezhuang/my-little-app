@@ -76,7 +76,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { publicThoughtApi } from '../../utils/api'
-import { BASE_URL } from '../../utils/constants'
+import { BASE_URL } from '../../constant'
 
 const thoughts = ref([])
 const loading = ref(false)

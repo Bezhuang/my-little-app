@@ -3,7 +3,7 @@ import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue'
-import { BASE_URL } from '../../utils/constants'
+import { BASE_URL } from '../../constant'
 
 const router = useRouter()
 

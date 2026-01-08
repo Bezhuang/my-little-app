@@ -13,7 +13,7 @@
     "dev:mp-qq": "uni -p mp-qq",
     "dev:mp-toutiao": "uni -p mp-toutiao",
     "dev:mp-harmony": "uni -p mp-harmony",
-    "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:mp-weixin": "node scripts/pre-build.js && uni -p mp-weixin",
     "dev:mp-xhs": "uni -p mp-xhs",
     "dev:quickapp-webview": "uni -p quickapp-webview",
     "dev:quickapp-webview-huawei": "uni -p quickapp-webview-huawei",
@@ -29,11 +29,12 @@
     "build:mp-qq": "uni build -p mp-qq",
     "build:mp-toutiao": "uni build -p mp-toutiao",
     "build:mp-harmony": "uni build -p mp-harmony",
-    "build:mp-weixin": "uni build -p mp-weixin",
+    "build:mp-weixin": "node scripts/pre-build.js && uni build -p mp-weixin",
     "build:mp-xhs": "uni build -p mp-xhs",
     "build:quickapp-webview": "uni build -p quickapp-webview",
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
-    "build:quickapp-webview-union": "uni build -p quickapp-webview-union"
+    "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
+    "prebuild:wx": "node scripts/pre-build.js"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080720251210001",
