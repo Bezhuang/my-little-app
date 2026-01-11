@@ -10,20 +10,20 @@
 		"navigationBarTitleText": "我的小应用",
 		"navigationBarBackgroundColor": "#FFFFFF",
 		"backgroundColor": "#F5F5F5",
-		"maxWidth": 1200
+		"maxWidth": 800
 	},
 	"pages": [
-		{
-			"path": "pages/blog/index",
-			"style": {
-				"navigationBarTitleText": "想法",
-				"navigationStyle": "custom"
-			}
-		},
 		{
 			"path": "pages/ai-chat/index",
 			"style": {
 				"navigationBarTitleText": "Bezhuang AI",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/blog/index",
+			"style": {
+				"navigationBarTitleText": "想法",
 				"navigationStyle": "custom"
 			}
 		},
@@ -66,6 +66,13 @@
 			"path": "pages/edit-profile/index",
 			"style": {
 				"navigationBarTitleText": "编辑资料"
+			}
+		},
+		{
+			"path": "pages/profile/settings/index",
+			"style": {
+				"navigationBarTitleText": "设置",
+				"navigationStyle": "custom"
 			}
 		},
 		{

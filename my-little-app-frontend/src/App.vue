@@ -36,24 +36,36 @@ page {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ==================== PC端适配 ==================== */
+/* H5端页面容器宽度限制 */
 @media screen and (min-width: 768px) {
-  /* PC/平板端容器最大宽度限制 */
-  .pc-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  /* 想法列表页 PC 样式 */
-  .moments-page {
+  uni-page-body > uni-view {
     max-width: 800px;
     margin: 0 auto;
   }
+}
 
+/* ==================== PC端适配 ==================== */
+@media screen and (min-width: 768px) {
+  /* PC/平板端容器最大宽度限制 */
+  .pc-container,
+  .moments-page,
+  .ai-chat-page,
+  .profile-page,
+  .tools-page,
+  .chat-header,
+  .blog-header,
+  .input-area {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 想法列表页 PC 样式 */
   .moment-item {
     border-radius: 12px;
-    margin: 16px;
+    margin: 16px auto;
     padding: 24px;
+    max-width: 700px;
   }
 
   .moment-content {
@@ -71,8 +83,12 @@ page {
 
   /* AI 聊天页面 PC 样式 */
   .ai-chat-page {
-    max-width: 900px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 0;
+    margin-bottom: 0;
     height: 100vh;
   }
 
@@ -89,7 +105,7 @@ page {
   }
 
   .messages-container {
-    max-width: 900px;
+    max-width: 800px;
     margin: 0 auto;
   }
 
@@ -186,13 +202,13 @@ page {
   }
 
   .message-content {
-    max-width: 700px;
+    max-width: 600px;
   }
 
   .ai-chat-page,
   .moments-page,
   .profile-page {
-    max-width: 1000px;
+    max-width: 800px;
   }
 }
 </style>

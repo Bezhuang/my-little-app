@@ -67,7 +67,8 @@
 
     <!-- 版本信息 -->
     <view class="version-info">
-      <text class="version-text">版本号: 1.0.0</text>
+      <text class="copyright-text">Copyright © Bezhuang</text>
+      <text class="version-text">版本号: 1.0.1</text>
     </view>
   </view>
 </template>
@@ -78,7 +79,7 @@ import { onShow } from '@dcloudio/uni-app'
 import userStore from '../../store/user'
 
 const quickActions = ref([
-  { iconChar: '💻', name: '关于开发者', type: 'link', url: 'https://bezhuang.cn', color: '#24292e' },
+  { iconChar: '💻', name: '关于开发者', type: 'link', url: 'https://www.baidu.com/s?wd=%E5%BA%84%E4%B9%8B%E7%9A%93%20%E4%B8%8A%E6%B5%B7', color: '#24292e' },
   { iconChar: '📧', name: '联系开发者', type: 'mailto', url: 'mailto:13818993049@163.com', color: '#667eea' },
   { iconChar: '🔔', name: '消息通知', type: 'notifications', color: '#667eea' }
 ])
@@ -205,10 +206,24 @@ const onMenuClick = (menu) => {
       })
       break
     case 'settings':
-      uni.showToast({
-        title: '设置页面开发中',
-        icon: 'none'
-      })
+      if (!userStore.state.isLogin) {
+        uni.showModal({
+          title: '提示',
+          content: '请先登录后再使用此功能',
+          confirmText: '去登录',
+          success: (res) => {
+            if (res.confirm) {
+              uni.navigateTo({
+                url: '/pages/login/index'
+              })
+            }
+          }
+        })
+      } else {
+        uni.navigateTo({
+          url: '/pages/profile/settings/index'
+        })
+      }
       break
     default:
       break
@@ -245,11 +260,13 @@ page {
   min-height: 100%;
   background-color: #f5f5f5;
   overflow: hidden;
+  padding-top: 100rpx;
 }
 
 .user-header {
   position: relative;
   padding-bottom: 40rpx;
+  margin-top: -100rpx;
 }
 
 .header-bg {
@@ -383,5 +400,12 @@ page {
 .version-text {
   font-size: 24rpx;
   color: #999;
+}
+
+.copyright-text {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 10rpx;
 }
 </style>

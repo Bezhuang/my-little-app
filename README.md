@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**版本**: v1.0.0
+**版本**: v1.0.1
 
 [![Java](https://img.shields.io/badge/Java-17-blue)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-brightgreen)](https://spring.io/projects/spring-boot)
@@ -206,11 +206,11 @@ source /path/to/your/project/my-little-app-backend/src/main/resources/db/init.sq
 
 以下配置文件包含敏感信息，已加入 `.gitignore`，首次克隆项目后需要复制模板并填入真实值：
 
-| 项目          | 配置文件                                              | 说明                     |
-| ------------- | ----------------------------------------------------- | ------------------------ |
-| 后端          | `my-little-app-backend/src/main/resources/`           | 数据库连接、JWT 密钥等   |
-| 移动端前端    | `my-little-app-frontend/src/constant.js`              | API 地址、微信 AppID     |
-| 管理后台      | `my-little-app-admin/src/constant.js`                 | API 地址                 |
+| 项目       | 配置文件                                    | 说明                   |
+| ---------- | ------------------------------------------- | ---------------------- |
+| 后端       | `my-little-app-backend/src/main/resources/` | 数据库连接、JWT 密钥等 |
+| 移动端前端 | `my-little-app-frontend/src/constant.js`    | API 地址、微信 AppID   |
+| 管理后台   | `my-little-app-admin/src/constant.js`       | API 地址               |
 
 ```bash
 # 后端配置
@@ -453,11 +453,16 @@ docker run -d -p 8080:8080 --name backend my-little-app-backend
 - 官方文档：https://bocha-ai.feishu.cn/wiki/RXEOw02rFiwzGSkd9mUcqoeAnNK
 - 用于实现 `web_search` 工具的联网搜索功能
 
+#### 3. SiliconFlow API
+- 官方文档：https://docs.siliconflow.cn/
+- 用于提供无需登录即可使用的模型，支持深度思考
+
 ## 版本历史
 
-| 版本   | 日期       | 说明         |
-| ------ | ---------- | ------------ |
-| v1.0.0 | 2025-12-31 | 初始版本发布 |
+| 版本   | 日期       | 说明               |
+| ------ | ---------- | ------------------ |
+| v1.0.0 | 2025-12-31 | 初始版本发布       |
+| v1.0.1 | 2026-01-10 | 优化UI，新增免费AI |
 
 ## License
 

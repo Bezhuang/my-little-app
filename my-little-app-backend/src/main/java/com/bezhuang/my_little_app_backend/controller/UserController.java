@@ -3,9 +3,13 @@ package com.bezhuang.my_little_app_backend.controller;
 import com.bezhuang.my_little_app_backend.config.security.CustomUserDetails;
 import com.bezhuang.my_little_app_backend.dto.Result;
 import com.bezhuang.my_little_app_backend.entity.Admin;
+import com.bezhuang.my_little_app_backend.entity.ApiUsage;
 import com.bezhuang.my_little_app_backend.entity.User;
+import com.bezhuang.my_little_app_backend.mapper.ApiUsageMapper;
 import com.bezhuang.my_little_app_backend.service.AdminService;
 import com.bezhuang.my_little_app_backend.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,12 +33,16 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
 public class UserController {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+
     private final UserService userService;
     private final AdminService adminService;
+    private final ApiUsageMapper apiUsageMapper;
 
-    public UserController(UserService userService, AdminService adminService) {
+    public UserController(UserService userService, AdminService adminService, ApiUsageMapper apiUsageMapper) {
         this.userService = userService;
         this.adminService = adminService;
+        this.apiUsageMapper = apiUsageMapper;
     }
 
     /**
@@ -47,6 +55,11 @@ public class UserController {
             return Result.unauthorized("请先登录");
         }
 
+        // 查询用户配额
+        ApiUsage apiUsage = apiUsageMapper.selectByUserId(currentUser.getId());
+        long remainingTokens = apiUsage != null ? apiUsage.getTokensRemaining() : 0L;
+        int remainingWebSearches = apiUsage != null ? apiUsage.getSearchRemaining() : 0;
+
         // 根据用户类型从不同的表查询
         if ("ADMIN".equals(currentUser.getUserType())) {
             // Admin 用户从 t_admin 表查询
@@ -57,6 +70,8 @@ public class UserController {
             admin.setPassword(null);
             Map<String, Object> data = buildAdminData(admin);
             data.put("userType", "ADMIN");
+            data.put("remainingTokens", remainingTokens);
+            data.put("remainingWebSearches", remainingWebSearches);
             return Result.success(data);
         } else {
             // 普通用户从 t_user 表查询
@@ -67,6 +82,8 @@ public class UserController {
             user.setPassword(null);
             Map<String, Object> data = buildUserData(user);
             data.put("userType", "USER");
+            data.put("remainingTokens", remainingTokens);
+            data.put("remainingWebSearches", remainingWebSearches);
             return Result.success(data);
         }
     }
@@ -123,7 +140,7 @@ public class UserController {
     public Result<Void> changePassword(
             @RequestParam String oldPassword,
             @RequestParam String newPassword) {
-        
+
         CustomUserDetails currentUser = getCurrentUser();
         if (currentUser == null) {
             return Result.unauthorized("请先登录");
@@ -141,7 +158,7 @@ public class UserController {
             } else {
                 success = userService.changePassword(currentUser.getId(), oldPassword, newPassword);
             }
-            
+
             if (success) {
                 return Result.success("密码修改成功", null);
             }
@@ -149,6 +166,45 @@ public class UserController {
         } catch (RuntimeException e) {
             return Result.error(e.getMessage());
         }
+    }
+
+    /**
+     * 签到
+     * 每日签到增加 3000 Token，总上限 660000
+     */
+    @PostMapping("/signin")
+    public Result<Map<String, Object>> signIn() {
+        CustomUserDetails currentUser = getCurrentUser();
+        if (currentUser == null) {
+            return Result.unauthorized("请先登录");
+        }
+
+        // 查询当前配额
+        ApiUsage apiUsage = apiUsageMapper.selectByUserId(currentUser.getId());
+        if (apiUsage == null) {
+            // 如果没有配额记录，先创建
+            apiUsage = new ApiUsage();
+            apiUsage.setUserId(currentUser.getId());
+            apiUsage.setTokensRemaining(0L);
+            apiUsage.setSearchRemaining(0);
+            apiUsageMapper.insert(apiUsage);
+        }
+
+        // 计算新余额（总上限 660000）
+        long currentTokens = apiUsage.getTokensRemaining() != null ? apiUsage.getTokensRemaining() : 0L;
+        long newTokens = Math.min(currentTokens + 3000L, 660000L);
+        long addedTokens = newTokens - currentTokens;
+
+        // 更新数据库
+        apiUsageMapper.updateTokensRemaining(apiUsage.getId(), newTokens);
+
+        logger.info("用户 {} 签到，增加 {} tokens，当前余额 {}", currentUser.getId(), addedTokens, newTokens);
+
+        // 返回结果
+        Map<String, Object> data = new HashMap<>();
+        data.put("addedTokens", addedTokens);
+        data.put("newTokens", newTokens);
+        return Result.success("签到成功", data);
     }
 
     /**

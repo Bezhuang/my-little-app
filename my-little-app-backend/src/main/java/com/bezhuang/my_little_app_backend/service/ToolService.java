@@ -1,6 +1,7 @@
 package com.bezhuang.my_little_app_backend.service;
 
 import com.bezhuang.my_little_app_backend.config.websearch.BochaWebSearchConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public class ToolService {
 
             return switch (toolName) {
                 case "get_current_time" -> executeGetCurrentTime(arguments);
-                case "web_search" -> executeWebSearch(arguments);
+                case "web_search" -> executeWebSearchTool(toolName, arguments).getContent();
                 default -> "未知工具: " + toolName;
             };
         } catch (Exception e) {
@@ -127,16 +128,9 @@ public class ToolService {
      */
     public String getToolsPrompt(boolean includeWebSearch) {
         StringBuilder sb = new StringBuilder();
-        sb.append("【工具使用指南】\n");
-        sb.append("你拥有以下工具，当用户提出相关问题时必须调用：\n\n");
-        sb.append("- get_current_time: 查询时间，当用户问\"现在几点了\"、\"日期\"等问题时调用\n");
-        if (includeWebSearch) {
-            sb.append("- web_search: 联网搜索，当用户需要实时信息、新闻、知识库外的内容时调用\n");
-        }
-        sb.append("\n使用规则：\n");
-        sb.append("1. 必须调用工具获取实时数据，不要编造信息\n");
-        sb.append("2. 工具调用后，用自然的中文回答用户\n");
-        sb.append("3. 如果工具调用失败，明确告知用户\n");
+        sb.append("【思考过程】每轮思考控制在50字以内，用1-2个要点概括即可。\n");
+        sb.append("【工具列表】get_current_time:查询当前时间, web_search:联网搜索实时数据。\n");
+        sb.append("仅必要时调用工具获取数据，不编造。");
         return sb.toString();
     }
 
@@ -170,37 +164,65 @@ public class ToolService {
     }
 
     /**
-     * 网页搜索（使用博查AI Web Search API）
+     * 网页搜索结果类
      */
-    private String executeWebSearch(String arguments) {
+    public static class WebSearchResult {
+        private String content;
+        private List<Map<String, String>> links; // 改为包含标题的链接列表
+
+        public WebSearchResult(String content, List<Map<String, String>> links) {
+            this.content = content;
+            this.links = links;
+        }
+
+        public String getContent() { return content; }
+        public List<Map<String, String>> getLinks() { return links; }
+    }
+
+    /**
+     * 网页搜索（使用博查AI Web Search API）
+     * 返回搜索结果和链接列表
+     */
+    private WebSearchResult executeWebSearchWithLinks(String arguments) {
         try {
             JsonNode argsNode = objectMapper.readTree(arguments);
             String query = argsNode.path("query").asText("");
 
             if (query.isEmpty()) {
-                return "请提供搜索关键词";
+                return new WebSearchResult("请提供搜索关键词", new ArrayList<>());
             }
 
             logger.info("执行网页搜索: {}", query);
 
             // 使用博查AI API
             if (bochaConfig.isConfigured()) {
-                String result = bochaWebSearch(query);
-                return result != null ? result : "联网搜索服务暂时不可用，请稍后重试。";
+                WebSearchResult result = bochaWebSearch(query);
+                return result;
             }
 
-            return "联网搜索服务未配置，请联系管理员。";
+            return new WebSearchResult("联网搜索服务未配置，请联系管理员。", new ArrayList<>());
 
         } catch (Exception e) {
             logger.error("网页搜索失败: {}", e.getMessage());
-            return "搜索失败: " + e.getMessage();
+            return new WebSearchResult("搜索失败: " + e.getMessage(), new ArrayList<>());
         }
     }
 
     /**
-     * 博查AI Web Search API
+     * 执行工具调用（返回 WebSearchResult）
      */
-    private String bochaWebSearch(String query) {
+    public WebSearchResult executeWebSearchTool(String toolName, String arguments) {
+        if ("web_search".equals(toolName)) {
+            return executeWebSearchWithLinks(arguments);
+        }
+        return new WebSearchResult("未知工具: " + toolName, new ArrayList<>());
+    }
+
+    /**
+     * 博查AI Web Search API
+     * 返回搜索结果和链接列表
+     */
+    private WebSearchResult bochaWebSearch(String query) {
         try {
             String apiKey = bochaConfig.getApiKey();
 
@@ -228,24 +250,25 @@ public class ToolService {
             if (jsonResponse.path("code").asInt() != 200) {
                 String errorMsg = jsonResponse.path("message").asText("未知错误");
                 logger.warn("博查AI搜索失败: {}", errorMsg);
-                return null;
+                return new WebSearchResult("搜索失败: " + errorMsg, new ArrayList<>());
             }
 
             // 解析搜索结果
             JsonNode data = jsonResponse.path("data");
             if (!data.has("webPages") || !data.path("webPages").has("value")) {
                 logger.warn("博查AI返回数据格式异常");
-                return null;
+                return new WebSearchResult("未找到相关结果。", new ArrayList<>());
             }
 
             JsonNode webpages = data.path("webPages").path("value");
             if (!webpages.isArray() || webpages.size() == 0) {
-                return "未找到相关结果。";
+                return new WebSearchResult("未找到相关结果。", new ArrayList<>());
             }
 
             StringBuilder result = new StringBuilder();
             result.append(String.format("【%s 的搜索结果】\n\n", query));
 
+            List<Map<String, String>> links = new ArrayList<>();
             int count = 0;
             for (JsonNode page : webpages) {
                 if (count >= 5) break;
@@ -255,6 +278,14 @@ public class ToolService {
                 String summary = page.path("summary").asText("");
                 String siteName = page.path("siteName").asText("");
                 String dateLastCrawled = page.path("dateLastCrawled").asText("");
+
+                // 保存包含标题的链接
+                if (!url.isEmpty()) {
+                    Map<String, String> linkInfo = new LinkedHashMap<>();
+                    linkInfo.put("url", url);
+                    linkInfo.put("title", name);
+                    links.add(linkInfo);
+                }
 
                 // 截取摘要
                 if (summary.length() > 200) {
@@ -281,11 +312,11 @@ public class ToolService {
                 count++;
             }
 
-            return result.toString().trim();
+            return new WebSearchResult(result.toString().trim(), links);
 
         } catch (Exception e) {
             logger.warn("博查AI搜索失败: {}", e.getMessage());
-            return null;
+            return new WebSearchResult("搜索失败: " + e.getMessage(), new ArrayList<>());
         }
     }
 }
