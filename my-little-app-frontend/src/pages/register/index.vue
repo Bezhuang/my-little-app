@@ -488,7 +488,7 @@ onUnmounted(() => {
 }
 
 .title-section {
-  padding-top: 80rpx;
+  padding-top: 180rpx;
   padding-left: 50rpx;
   position: relative;
   z-index: 1;

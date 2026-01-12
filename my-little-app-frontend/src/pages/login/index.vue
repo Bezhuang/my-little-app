@@ -1,11 +1,5 @@
 <template>
   <view class="login-page">
-    <!-- 返回按钮 -->
-    <view class="back-btn" @click="goBack">
-      <text class="back-icon">‹</text>
-      <text class="back-text">返回</text>
-    </view>
-
     <!-- 顶部装饰 -->
     <view class="header-decoration">
       <view class="circle circle-1"></view>
@@ -80,6 +74,11 @@
         <view class="register-section">
           <text class="register-text">还没有账号？</text>
           <text class="register-link" @click="goToRegister">立即注册</text>
+        </view>
+
+        <view class="back-btn" @click="goBack">
+          <text class="back-icon">‹</text>
+          <text class="back-text">返回</text>
         </view>
       </view>
     </view>
@@ -215,26 +214,23 @@ onLoad()
 
 // 返回按钮
 .back-btn {
-  position: fixed;
-  top: 60rpx;
-  left: 30rpx;
   display: flex;
   align-items: center;
-  z-index: 100;
-  padding: 10rpx 20rpx;
-  border-radius: 40rpx;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
+  justify-content: center;
+  margin-top: 30rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: #f5f5f5;
 
   .back-icon {
     font-size: 40rpx;
-    color: #fff;
+    color: #667eea;
     font-weight: bold;
   }
 
   .back-text {
     font-size: 28rpx;
-    color: #fff;
+    color: #667eea;
     margin-left: 4rpx;
   }
 }
@@ -438,23 +434,6 @@ onLoad()
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-  }
-
-  .back-btn {
-    position: fixed;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-left: -500px;
-    padding: 12px 24px;
-
-    .back-icon {
-      font-size: 28px;
-    }
-
-    .back-text {
-      font-size: 16px;
-    }
   }
 
   .logo-section {

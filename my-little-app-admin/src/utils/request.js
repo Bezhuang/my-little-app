@@ -3,7 +3,7 @@
  */
 
 import axios from 'axios'
-import { BASE_URL } from './constants'
+import { BASE_URL } from '../constant'
 
 // API 基础地址
 const API_BASE_URL = BASE_URL + '/api'

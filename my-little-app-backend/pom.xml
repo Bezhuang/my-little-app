@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.bezhuang</groupId>
 	<artifactId>my-little-app-backend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.1</version>
 	<name>my-little-app-backend</name>
 	<description>my-little-app-project-backend</description>
 

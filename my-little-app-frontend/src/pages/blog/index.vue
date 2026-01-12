@@ -153,9 +153,11 @@ const fetchThoughts = async (refresh = false) => {
   } finally {
     loading.value = false
     isRefreshing.value = false
-    initialized.value = true
-    // 滚动到顶部
-    scrollTop.value = 0
+    // 只在首次加载时滚动到顶部
+    if (!initialized.value) {
+      initialized.value = true
+      scrollTop.value = 0
+    }
   }
 }
 
@@ -200,7 +202,7 @@ const formatTime = (time) => {
 }
 
 onShow(() => {
-  // 刷新想法列表
+  // 刷新想法列表（用户可能发布了新想法）
   fetchThoughts(true)
 })
 
@@ -229,6 +231,19 @@ onMounted(() => {
   z-index: 999;
 }
 
+/* PC端适配 */
+@media screen and (min-width: 768px) {
+  .blog-header {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 800px;
+    padding-left: 30rpx;
+    padding-right: 30rpx;
+  }
+}
+
 .blog-header .header-left {
   flex: 1;
 }
@@ -253,6 +268,14 @@ onMounted(() => {
   padding: 20rpx;
   padding-top: calc(210rpx + env(safe-area-inset-top));
   padding-bottom: 40rpx;
+}
+
+/* PC端适配 */
+@media screen and (min-width: 768px) {
+  .moments-page {
+    padding-left: 20rpx;
+    padding-right: 20rpx;
+  }
 }
 
 .moments-list {

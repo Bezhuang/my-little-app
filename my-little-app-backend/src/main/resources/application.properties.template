@@ -20,6 +20,12 @@ deepseek.reasoner-model=deepseek-reasoner
 deepseek.max.tokens=8192
 # Note: deepseek.temperature 已移至数据库 ai_config 表，管理员可在后台 ai-config 页面修改
 
+# SiliconFlow AI Configuration (无需登录即可使用)
+# 请替换为您的API Key
+siliconflow.api.key=your-siliconflow-api-key
+siliconflow.api.base-url=https://api.siliconflow.cn/v1
+siliconflow.model=THUDM/GLM-4.1V-9B-Thinking
+
 # Bocha Web Search API (https://bocha-ai.feishu.cn/wiki/RXEOw02rFiwzGSkd9mUcqoeAnNK)
 # 请替换为您的API Key
 bocha.websearch.api.key=your-bocha-api-key

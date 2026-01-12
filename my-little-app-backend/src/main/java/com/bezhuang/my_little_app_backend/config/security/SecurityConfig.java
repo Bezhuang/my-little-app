@@ -93,13 +93,16 @@ public class SecurityConfig {
                 // 公开图片数据接口（无需认证，用于前端显示）
                 .requestMatchers("/api/admin/images/public/**").permitAll()
 
+                // SiliconFlow AI 接口无需登录（默认模型）
+                .requestMatchers("/api/ai/siliconflow/**").permitAll()
+
                 // Admin 接口需要 ADMIN 角色
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // User 接口需要登录
                 .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
 
-                // AI 接口需要登录
+                // AI 接口需要登录（DeepSeek 等）
                 .requestMatchers("/api/ai/**").hasAnyRole("USER", "ADMIN")
 
                 // 其他请求需要认证

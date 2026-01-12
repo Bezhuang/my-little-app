@@ -320,6 +320,7 @@ public class DeepSeekProxyController {
             response.put("success", true);
             response.put("response", result.response);
             response.put("thinking", result.thinking);
+            response.put("searchLinks", result.searchLinks);
             response.put("tokensRemaining", usage.getTokensRemaining() != null ? usage.getTokensRemaining() : 0);
             response.put("searchRemaining", usage.getSearchRemaining() != null ? usage.getSearchRemaining() : 0);
             if (newWarning != null) {
@@ -343,35 +344,38 @@ public class DeepSeekProxyController {
         long inputTokens;
         long outputTokens;
         int searchUsed;
+        List<Map<String, String>> searchLinks;
 
-        ToolCallResult(String response, String thinking, long inputTokens, long outputTokens, int searchUsed) {
+        ToolCallResult(String response, String thinking, long inputTokens, long outputTokens, int searchUsed, List<Map<String, String>> searchLinks) {
             this.response = response;
             this.thinking = thinking;
             this.inputTokens = inputTokens;
             this.outputTokens = outputTokens;
             this.searchUsed = searchUsed;
+            this.searchLinks = searchLinks != null ? searchLinks : new ArrayList<>();
         }
     }
 
     /**
-     * 同步执行工具调用流程（支持深度思考）
+     * 同步执行工具调用流程（支持多轮思考 Chain of Thoughts）
      */
     private ToolCallResult executeToolCallsSync(List<Map<String, Object>> messages, boolean enableDeepThink,
                                                 boolean enableWebSearch, Long userId)
             throws JsonProcessingException {
         String chatModel = deepSeekConfig.getModel();
         String reasonerModel = deepSeekConfig.getReasonerModel();
-        String thinking = "";
+        List<String> allThinking = new ArrayList<>(); // 收集所有思考过程
         int toolCallCount = 0;
         int totalSearchUsed = 0;
         long totalInputTokens = 0;
         long totalOutputTokens = 0;
+        List<Map<String, String>> allSearchLinks = new ArrayList<>(); // 收集所有搜索链接（包含标题）
 
         logger.info("开始执行工具调用流程，当前消息数: {}", messages.size());
 
         while (toolCallCount < MAX_TOOL_CALLS) {
-            // 选择模型：工具调用时用chat，否则根据深度思考设置选择
-            String currentModel = toolCallCount > 0 ? chatModel : (enableDeepThink ? reasonerModel : chatModel);
+            // 选择模型：启用深度思考时每轮都使用 reasonerModel
+            String currentModel = enableDeepThink ? reasonerModel : chatModel;
 
             // 传递工具定义
             Map<String, Object> requestBody = buildRequestBody(currentModel, messages, true, enableWebSearch);
@@ -394,12 +398,24 @@ public class DeepSeekProxyController {
                     message.path("content").asText("").substring(0, Math.min(100, message.path("content").asText("").length())),
                     message.has("tool_calls"));
 
-            // 获取思考过程（只在第一轮且启用深度思考时获取）
-            if (enableDeepThink && toolCallCount == 0) {
+            // 获取思考过程（每轮都获取，最多500字）
+            if (enableDeepThink && message.has("reasoning_content")) {
                 JsonNode reasoning = message.path("reasoning_content");
                 if (!reasoning.isNull() && !reasoning.asText().isEmpty()) {
-                    thinking = reasoning.asText();
+                    String roundThinking = reasoning.asText().trim();
+                    if (!roundThinking.isEmpty()) {
+                        // 限制每轮思考不超过500字
+                        if (roundThinking.length() > 500) {
+                            roundThinking = roundThinking.substring(0, 500) + "...";
+                        }
+                        allThinking.add("=== 第 " + (toolCallCount + 1) + " 轮思考 ===\n" + roundThinking);
+                        logger.info("第 {} 轮思考过程长度: {}", toolCallCount + 1, roundThinking.length());
+                    }
+                } else {
+                    logger.info("第 {} 轮 reasoning_content 为空", toolCallCount + 1);
                 }
+            } else {
+                logger.info("第 {} 轮无 reasoning_content 字段", toolCallCount + 1);
             }
 
             // 检查是否有工具调用
@@ -407,11 +423,20 @@ public class DeepSeekProxyController {
             if (toolCalls.isArray() && toolCalls.size() > 0) {
                 logger.info("检测到工具调用，数量: {}", toolCalls.size());
 
-                // 添加 assistant 消息
+                // 获取当前轮的 reasoning_content（如果有的话）
+                String reasoningContent = "";
+                if (message.has("reasoning_content") && !message.path("reasoning_content").isNull()) {
+                    reasoningContent = message.path("reasoning_content").asText("");
+                }
+
+                // 添加 assistant 消息（包含 tool_calls 和 reasoning_content）
                 Map<String, Object> assistantMessage = new LinkedHashMap<>();
                 assistantMessage.put("role", "assistant");
                 assistantMessage.put("content", message.path("content").asText(""));
                 assistantMessage.put("tool_calls", objectMapper.readValue(toolCalls.toString(), List.class));
+                // DeepSeek reasoner 模型要求：包含 tool_calls 的消息必须也有 reasoning_content
+                // 必须包含该字段，即使为空
+                assistantMessage.put("reasoning_content", reasoningContent);
                 messages.add(assistantMessage);
 
                 // 执行工具调用
@@ -421,7 +446,16 @@ public class DeepSeekProxyController {
 
                     logger.info("执行工具调用: {}, 参数: {}", toolName, arguments);
 
-                    String toolResult = toolService.executeTool(toolName, arguments);
+                    // 如果是搜索工具，使用新方法获取链接
+                    String toolResult;
+                    if ("web_search".equals(toolName) && enableWebSearch) {
+                        ToolService.WebSearchResult searchResult = toolService.executeWebSearchTool(toolName, arguments);
+                        toolResult = searchResult.getContent();
+                        allSearchLinks.addAll(searchResult.getLinks());
+                        logger.info("搜索工具返回链接数: {}", searchResult.getLinks().size());
+                    } else {
+                        toolResult = toolService.executeTool(toolName, arguments);
+                    }
 
                     // 统计搜索使用次数
                     if ("web_search".equals(toolName)) {
@@ -463,13 +497,53 @@ public class DeepSeekProxyController {
             String content = message.path("content").asText("");
             logger.info("无工具调用，返回内容长度: {}", content.length());
 
+            // 注意：reasoning_content 已经在上面（第401-419行）添加过了，不需要重复添加
+
+            // 合并所有思考过程
+            String thinking = String.join("\n\n", allThinking);
+            logger.info("共收集到 {} 轮思考，总长度: {}", allThinking.size(), thinking.length());
+
+            // 如果没有工具调用，content 可能包含思考内容，需要提取最终回复
+            if (!message.has("tool_calls") || message.path("tool_calls").isEmpty()) {
+                // 检查 content 是否以"第X轮思考"开头且包含"最终"关键词
+                // 如果是，说明 content 包含思考内容，需要提取最终回复部分
+                if (content.contains("最终") || content.contains("总结") || content.contains("所以")) {
+                    // 尝试提取最终回复（通常在"最终"、"总结"、"所以"等关键词之后）
+                    int finalStart = Math.max(
+                        content.lastIndexOf("最终"),
+                        Math.max(
+                            content.lastIndexOf("总结"),
+                            content.lastIndexOf("所以")
+                        )
+                    );
+                    if (finalStart > 0 && finalStart > content.length() / 2) {
+                        // 只保留最终回复部分（去掉前面的思考过程）
+                        String finalAnswer = content.substring(finalStart).trim();
+                        // 如果最终回复太短，可能是"最终解决方案："这样的格式
+                        if (finalAnswer.length() < 50) {
+                            // 找到冒号后的内容
+                            int colonIndex = finalAnswer.indexOf("：");
+                            if (colonIndex > 0 && colonIndex < finalAnswer.length() - 1) {
+                                finalAnswer = finalAnswer.substring(colonIndex + 1).trim();
+                            }
+                        }
+                        // 如果提取的内容合理，使用它作为最终回复
+                        if (finalAnswer.length() > 20) {
+                            content = finalAnswer;
+                            logger.info("提取最终回复，长度: {}", content.length());
+                        }
+                    }
+                }
+            }
+
             // 消耗Token配额
             if (userId != null) {
                 apiUsageService.consumeTokens(userId, totalInputTokens, totalOutputTokens);
-                logger.info("用户 {} 消耗 tokens: 输入 {}, 输出 {}", userId, totalInputTokens, totalOutputTokens);
+                logger.info("Token使用：输入 {}, 输出 {}", totalInputTokens, totalOutputTokens);
+                logger.info("联网搜索使用：{} 次", totalSearchUsed);
             }
 
-            return new ToolCallResult(content, thinking, totalInputTokens, totalOutputTokens, totalSearchUsed);
+            return new ToolCallResult(content, thinking, totalInputTokens, totalOutputTokens, totalSearchUsed, allSearchLinks);
         }
 
         logger.warn("工具调用次数达到上限: {}", MAX_TOOL_CALLS);
@@ -477,11 +551,12 @@ public class DeepSeekProxyController {
         if (userId != null) {
             apiUsageService.consumeTokens(userId, totalInputTokens, totalOutputTokens);
         }
-        return new ToolCallResult("工具调用次数过多，请重试", thinking, totalInputTokens, totalOutputTokens, totalSearchUsed);
+        String thinking = String.join("\n\n", allThinking);
+        return new ToolCallResult("工具调用次数过多，请重试", thinking, totalInputTokens, totalOutputTokens, totalSearchUsed, allSearchLinks);
     }
 
     /**
-     * 流式执行工具调用流程（支持深度思考）
+     * 流式执行工具调用流程（支持多轮思考 Chain of Thoughts）
      * 使用同步 API 调用 DeepSeek，前端通过打字机效果逐字显示
      */
     private void executeWithToolCalls(List<Map<String, Object>> messages, boolean enableDeepThink,
@@ -489,17 +564,20 @@ public class DeepSeekProxyController {
                                       ScheduledExecutorService heartbeatScheduler, Long userId) {
         String chatModel = deepSeekConfig.getModel();
         String reasonerModel = deepSeekConfig.getReasonerModel();
+        List<String> allThinking = new ArrayList<>(); // 收集所有思考过程
         int toolCallCount = 0;
-        String thinking = "";
         long totalInputTokens = 0;
         long totalOutputTokens = 0;
+        int totalSearchUsed = 0;
+        List<Map<String, String>> allSearchLinks = new ArrayList<>(); // 收集所有搜索链接（包含标题）
 
+        logger.info("深度思考模式: {}", enableDeepThink);
         logger.info("开始执行工具调用流程，当前消息数: {}", messages.size());
 
         while (toolCallCount < MAX_TOOL_CALLS) {
             try {
-                // 选择模型
-                String currentModel = toolCallCount > 0 ? chatModel : (enableDeepThink ? reasonerModel : chatModel);
+                // 选择模型：启用深度思考时每轮都使用 reasonerModel
+                String currentModel = enableDeepThink ? reasonerModel : chatModel;
 
                 // 传递工具定义
                 Map<String, Object> requestBody = buildRequestBody(currentModel, messages, true, enableWebSearch);
@@ -520,11 +598,18 @@ public class DeepSeekProxyController {
 
                 logger.info("第 {} 轮响应: tool_calls present={}", toolCallCount + 1, message.has("tool_calls"));
 
-                // 获取思考过程
-                if (enableDeepThink && toolCallCount == 0) {
+                // 获取思考过程（每轮都获取，最多500字）
+                if (enableDeepThink && message.has("reasoning_content")) {
                     JsonNode reasoning = message.path("reasoning_content");
                     if (!reasoning.isNull() && !reasoning.asText().isEmpty()) {
-                        thinking = reasoning.asText();
+                        String roundThinking = reasoning.asText().trim();
+                        if (!roundThinking.isEmpty()) {
+                            // 限制每轮思考不超过500字
+                            if (roundThinking.length() > 500) {
+                                roundThinking = roundThinking.substring(0, 500) + "...";
+                            }
+                            allThinking.add("=== 第 " + (toolCallCount + 1) + " 轮思考 ===\n" + roundThinking);
+                        }
                     }
                 }
 
@@ -533,10 +618,20 @@ public class DeepSeekProxyController {
                 if (toolCalls.isArray() && toolCalls.size() > 0) {
                     logger.info("检测到工具调用，数量: {}", toolCalls.size());
 
+                    // 获取当前轮的 reasoning_content（如果有的话）
+                    String reasoningContent = "";
+                    if (message.has("reasoning_content") && !message.path("reasoning_content").isNull()) {
+                        reasoningContent = message.path("reasoning_content").asText("");
+                    }
+
+                    // 添加 assistant 消息（包含 tool_calls 和 reasoning_content）
                     Map<String, Object> assistantMessage = new LinkedHashMap<>();
                     assistantMessage.put("role", "assistant");
                     assistantMessage.put("content", message.path("content").asText(""));
                     assistantMessage.put("tool_calls", objectMapper.readValue(toolCalls.toString(), List.class));
+                    // DeepSeek reasoner 模型要求：包含 tool_calls 的消息必须也有 reasoning_content
+                    // 必须包含该字段，即使为空
+                    assistantMessage.put("reasoning_content", reasoningContent);
                     messages.add(assistantMessage);
 
                     // 执行工具调用
@@ -546,7 +641,16 @@ public class DeepSeekProxyController {
 
                         logger.info("执行工具调用: {}, 参数: {}", toolName, arguments);
 
-                        String toolResult = toolService.executeTool(toolName, arguments);
+                        // 如果是搜索工具，使用新方法获取链接
+                        String toolResult;
+                        if ("web_search".equals(toolName) && enableWebSearch) {
+                            ToolService.WebSearchResult searchResult = toolService.executeWebSearchTool(toolName, arguments);
+                            toolResult = searchResult.getContent();
+                            allSearchLinks.addAll(searchResult.getLinks());
+                            logger.info("搜索工具返回链接数: {}", searchResult.getLinks().size());
+                        } else {
+                            toolResult = toolService.executeTool(toolName, arguments);
+                        }
 
                         // 统计搜索使用次数
                         if ("web_search".equals(toolName)) {
@@ -554,6 +658,8 @@ public class DeepSeekProxyController {
                             if (!consumed) {
                                 logger.warn("用户 {} 搜索次数已用尽", userId);
                                 toolResult = "搜索次数已用尽，请联系管理员充值。";
+                            } else {
+                                totalSearchUsed++;
                             }
                         }
 
@@ -585,14 +691,54 @@ public class DeepSeekProxyController {
                 String content = message.path("content").asText("");
                 logger.info("无工具调用，返回内容长度: {}", content.length());
 
-                // 发送思考过程（第一轮）
-                if (enableDeepThink && toolCallCount == 0 && !thinking.isEmpty()) {
+                // 如果有 reasoning_content，将其添加到思考列表
+                if (enableDeepThink && message.has("reasoning_content")) {
+                    JsonNode reasoning = message.path("reasoning_content");
+                    if (!reasoning.isNull() && !reasoning.asText().isEmpty()) {
+                        String roundThinking = reasoning.asText().trim();
+                        if (!roundThinking.isEmpty()) {
+                            if (roundThinking.length() > 500) {
+                                roundThinking = roundThinking.substring(0, 500) + "...";
+                            }
+                            allThinking.add("=== 第 " + (toolCallCount + 1) + " 轮思考 ===\n" + roundThinking);
+                            logger.info("第 {} 轮思考过程长度: {}", toolCallCount + 1, roundThinking.length());
+                        }
+                    }
+                }
+
+                // 发送思考过程（合并所有轮次的思考）
+                String thinking = String.join("\n\n", allThinking);
+                if (enableDeepThink && !thinking.isEmpty()) {
                     try {
                         logger.info("发送 SSE reasoning 事件，内容长度: {}", thinking.length());
                         emitter.send(SseEmitter.event().name("reasoning")
                                 .data("{\"reasoning\": " + escapeJson(thinking) + "}"));
                     } catch (IOException e) {
                         logger.error("发送 reasoning 失败", e);
+                    }
+                }
+
+                // 如果没有工具调用，content 可能包含思考内容，需要提取最终回复
+                if (content.contains("最终") || content.contains("总结") || content.contains("所以")) {
+                    int finalStart = Math.max(
+                        content.lastIndexOf("最终"),
+                        Math.max(
+                            content.lastIndexOf("总结"),
+                            content.lastIndexOf("所以")
+                        )
+                    );
+                    if (finalStart > 0 && finalStart > content.length() / 2) {
+                        String finalAnswer = content.substring(finalStart).trim();
+                        if (finalAnswer.length() < 50) {
+                            int colonIndex = finalAnswer.indexOf("：");
+                            if (colonIndex > 0 && colonIndex < finalAnswer.length() - 1) {
+                                finalAnswer = finalAnswer.substring(colonIndex + 1).trim();
+                            }
+                        }
+                        if (finalAnswer.length() > 20) {
+                            content = finalAnswer;
+                            logger.info("提取最终回复，长度: {}", content.length());
+                        }
                     }
                 }
 
@@ -622,7 +768,8 @@ public class DeepSeekProxyController {
                         heartbeatScheduler.shutdown();
                         return;
                     }
-                    logger.info("用户 {} 消耗 tokens: 输入 {}, 输出 {}", userId, totalInputTokens, totalOutputTokens);
+                    logger.info("Token使用：输入 {}, 输出 {}", totalInputTokens, totalOutputTokens);
+                    logger.info("联网搜索使用：{} 次", totalSearchUsed);
 
                     // 发送配额信息
                     ApiUsage userQuota = apiUsageService.getUserQuota(userId);
@@ -642,6 +789,17 @@ public class DeepSeekProxyController {
                         }
                     } catch (IOException ex) {
                         logger.error("发送配额信息失败", ex);
+                    }
+                }
+
+                // 发送搜索链接
+                if (!allSearchLinks.isEmpty()) {
+                    try {
+                        String linksJson = objectMapper.writeValueAsString(allSearchLinks);
+                        logger.info("发送 SSE searchLinks 事件，链接数: {}", allSearchLinks.size());
+                        emitter.send(SseEmitter.event().name("searchLinks").data("{\"searchLinks\": " + linksJson + "}"));
+                    } catch (IOException e) {
+                        logger.error("发送搜索链接失败", e);
                     }
                 }
 
@@ -689,27 +847,33 @@ public class DeepSeekProxyController {
      */
     private Map<String, Object> buildRequestBody(String model, List<Map<String, Object>> messages,
                                                   boolean includeTools, boolean enableWebSearch) {
+        double temperature = getTemperatureFromDb();
+        String systemPrompt = getSystemPrompt(enableWebSearch);
+
+        logger.info("深度思考模式: {}", false);  // 会在调用方设置
+        logger.info("System Prompt: {}", systemPrompt);
+        logger.info("Temperature: {}", temperature);
+        logger.info("选用的模型: {}", model);
+        logger.info("Messages count: {}", messages.size());
+
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", model);
         requestBody.put("messages", messages);
         requestBody.put("stream", false);
         requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
-        requestBody.put("temperature", getTemperatureFromDb());
+        requestBody.put("temperature", temperature);
 
         // 添加工具定义
         if (includeTools) {
             List<Map<String, Object>> tools = toolService.getToolsDefinition(enableWebSearch);
             if (!tools.isEmpty()) {
                 requestBody.put("tools", tools);
-                logger.info("=== 发送请求到 DeepSeek ===");
-                logger.info("Model: {}", model);
-                logger.info("Messages count: {}", messages.size());
-                logger.info("WebSearch enabled: {}", enableWebSearch);
+                logger.info("开始调用 DeepSeek API...");
+                logger.info("联网搜索: {}", enableWebSearch ? "启用" : "关闭");
                 logger.info("Tools count: {}", tools.size());
                 for (Map<String, Object> tool : tools) {
                     logger.info("Tool: {}", tool.get("function"));
                 }
-                logger.info("===========================");
             }
         }
 
