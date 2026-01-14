@@ -16,7 +16,65 @@
 
 	<properties>
 		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
 	</properties>
+
+	<!-- Maven 混合源配置：阿里云镜像为主，Maven Central 为辅 -->
+	<repositories>
+		<!-- 阿里云 Maven 镜像（优先使用） -->
+		<repository>
+			<id>aliyun</id>
+			<name>Aliyun Maven Mirror</name>
+			<url>https://maven.aliyun.com/repository/public</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<!-- Maven Central 官方仓库（回退源） -->
+		<repository>
+			<id>central</id>
+			<name>Maven Central</name>
+			<url>https://repo.maven.apache.org/maven2</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<!-- Spring 官方仓库（部分依赖需要） -->
+		<repository>
+			<id>spring</id>
+			<name>Spring Repository</name>
+			<url>https://repo.spring.io/release</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>aliyun</id>
+			<url>https://maven.aliyun.com/repository/public</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+		</pluginRepository>
+		<pluginRepository>
+			<id>spring</id>
+			<name>Spring Repository</name>
+			<url>https://repo.spring.io/release</url>
+		</pluginRepository>
+	</pluginRepositories>
 
 	<dependencies>
 		<!-- Spring Boot Web -->

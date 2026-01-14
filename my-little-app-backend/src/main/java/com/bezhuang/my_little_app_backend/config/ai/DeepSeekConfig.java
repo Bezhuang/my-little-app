@@ -15,13 +15,13 @@ public class DeepSeekConfig {
     @Value("${deepseek.api.base-url:https://api.deepseek.com}")
     private String baseUrl;
 
-    @Value("${deepseek.model:deepseek-chat}")
+    @Value("${deepseek.model}")
     private String model;
 
-    @Value("${deepseek.reasoner-model:deepseek-reasoner}")
+    @Value("${deepseek.reasoner-model}")
     private String reasonerModel;
 
-    @Value("${deepseek.max.tokens:8192}")
+    @Value("${deepseek.max.tokens}")
     private int maxTokens;
 
     @Value("${deepseek.temperature:0.7}")

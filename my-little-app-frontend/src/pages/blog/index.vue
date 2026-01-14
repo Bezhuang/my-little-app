@@ -3,7 +3,7 @@
     <!-- 顶部栏 -->
     <view class="blog-header">
       <view class="header-left">
-        <text class="blog-title">想法</text>
+        <text class="blog-title">{{ appName }} - 想法</text>
         <text class="blog-subtitle">分享生活点滴</text>
       </view>
     </view>
@@ -86,6 +86,22 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const scrollTop = ref(0) // 滚动位置
 const initialized = ref(false) // 标记是否已初始化
+const appName = ref('我的博客')
+
+// 获取应用名称
+const fetchAppName = async () => {
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL}/api/setup/app-name`,
+      method: 'GET'
+    })
+    if (res[1].statusCode === 200 && res[1].data.success) {
+      appName.value = res[1].data.data
+    }
+  } catch (error) {
+    console.error('获取应用名称失败:', error)
+  }
+}
 
 const loadStatus = computed(() => {
   if (loading.value) return 'loading'
@@ -206,8 +222,9 @@ onShow(() => {
   fetchThoughts(true)
 })
 
-onMounted(() => {
-  fetchThoughts(true)
+onMounted(async () => {
+  await fetchAppName()
+  await fetchThoughts(true)
 })
 </script>
 

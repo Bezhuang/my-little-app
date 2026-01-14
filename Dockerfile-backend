@@ -1,0 +1,35 @@
+# ==================== 后端构建 ====================
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+WORKDIR /app
+
+# 复制 Maven 配置（混合源）
+COPY docker/maven-settings.xml /root/.m2/settings.xml
+
+# 复制依赖文件加速构建
+COPY my-little-app-backend/pom.xml ./
+COPY my-little-app-backend/src ./src
+
+# 构建 JAR（使用阿里云镜像，Maven Central 作为回退）
+RUN mvn clean package -DskipTests -f pom.xml
+
+# ==================== 运行阶段 ====================
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+# 设置时区 (使用阿里云镜像避免网络问题)
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true && \
+    apt-get update && apt-get install -y --no-install-recommends tzdata && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 复制构建产物
+COPY --from=builder /app/target/*.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 运行命令
+CMD ["java", "-jar", "app.jar"]

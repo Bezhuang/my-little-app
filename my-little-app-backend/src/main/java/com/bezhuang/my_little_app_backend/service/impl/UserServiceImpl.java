@@ -3,6 +3,7 @@ package com.bezhuang.my_little_app_backend.service.impl;
 import com.bezhuang.my_little_app_backend.dto.PageResult;
 import com.bezhuang.my_little_app_backend.entity.User;
 import com.bezhuang.my_little_app_backend.mapper.UserMapper;
+import com.bezhuang.my_little_app_backend.service.CacheService;
 import com.bezhuang.my_little_app_backend.service.UserService;
 import com.bezhuang.my_little_app_backend.util.MD5Util;
 import org.springframework.stereotype.Service;
@@ -18,18 +19,31 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
+    private final CacheService cacheService;
 
-    public UserServiceImpl(UserMapper userMapper) {
+    private static final String USER_CACHE_PREFIX = "user:";
+    private static final long USER_CACHE_TTL = 600; // 10分钟
+
+    public UserServiceImpl(UserMapper userMapper, CacheService cacheService) {
         this.userMapper = userMapper;
+        this.cacheService = cacheService;
     }
 
     @Override
     public User getById(Long id) {
-        return userMapper.selectById(id);
+        String cacheKey = USER_CACHE_PREFIX + id;
+        return cacheService.getOrLoad(cacheKey, User.class, () -> {
+            User user = userMapper.selectById(id);
+            if (user != null) {
+                user.setPassword(null); // 缓存中不存密码
+            }
+            return user;
+        });
     }
 
     @Override
     public User getByUsername(String username) {
+        // 用户名查询不使用缓存（查询频率低）
         return userMapper.selectByUsername(username);
     }
 
@@ -119,8 +133,13 @@ public class UserServiceImpl implements UserService {
         
         // 强制清除密码字段，确保Admin不能修改用户密码
         user.setPassword(null);
-        
-        return userMapper.updateWithoutPassword(user) > 0;
+
+        boolean result = userMapper.updateWithoutPassword(user) > 0;
+        if (result) {
+            // 清除用户缓存
+            cacheService.delete(USER_CACHE_PREFIX + user.getId());
+        }
+        return result;
     }
 
     @Override
@@ -150,8 +169,13 @@ public class UserServiceImpl implements UserService {
         if (user.getEmail() != null && existsByEmail(user.getEmail(), userId)) {
             throw new RuntimeException("邮箱已存在");
         }
-        
-        return userMapper.updateWithoutPassword(user) > 0;
+
+        boolean result = userMapper.updateWithoutPassword(user) > 0;
+        if (result) {
+            // 清除用户缓存
+            cacheService.delete(USER_CACHE_PREFIX + userId);
+        }
+        return result;
     }
 
     @Override
@@ -194,7 +218,12 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
-        return userMapper.deleteById(id) > 0;
+        boolean result = userMapper.deleteById(id) > 0;
+        if (result) {
+            // 清除用户缓存
+            cacheService.delete(USER_CACHE_PREFIX + id);
+        }
+        return result;
     }
 
     @Override
@@ -204,7 +233,12 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
-        return userMapper.updateStatus(id, status) > 0;
+        boolean result = userMapper.updateStatus(id, status) > 0;
+        if (result) {
+            // 清除用户缓存
+            cacheService.delete(USER_CACHE_PREFIX + id);
+        }
+        return result;
     }
 
     @Override

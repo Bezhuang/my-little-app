@@ -3,7 +3,7 @@
     <!-- 顶部栏 -->
     <view class="chat-header">
       <view class="header-left">
-        <text class="chat-title">Bezhuang AI</text>
+        <text class="chat-title">{{ appName }} - AI助手</text>
         <text class="chat-subtitle">智能聊天助手</text>
       </view>
     </view>
@@ -27,7 +27,7 @@
       <!-- 欢迎消息 -->
       <view v-if="messages.length === 0" class="welcome-message">
         <view class="welcome-content">
-          <text class="welcome-title">你好，我是 Bezhuang AI</text>
+          <text class="welcome-title">你好，我是 {{ appName }} AI</text>
           <text class="welcome-desc">我可以进行多轮对话，支持开启深度思考和联网搜索模式。有什么我可以帮你的吗？</text>
         </view>
       </view>
@@ -210,10 +210,27 @@ import userStore from '@/store/user'
 import { createConversation, getAllConversations, addMessageToConversation, clearAllConversations } from '@/utils/indexedDB'
 import { BASE_URL } from '@/constant'
 
+const appName = ref('我的博客')
+
+// 获取应用名称
+const fetchAppName = async () => {
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL}/api/setup/app-name`,
+      method: 'GET'
+    })
+    if (res[1].statusCode === 200 && res[1].data.success) {
+      appName.value = res[1].data.data
+    }
+  } catch (error) {
+    console.error('获取应用名称失败:', error)
+  }
+}
+
 // 模型列表
 const MODELS = [
-  { id: 'siliconflow', name: '基础模型', provider: 'Qwen3-8B', requiresAuth: false, hasVision: false, hasDeepThink: true, hasWebSearch: false },
-  { id: 'deepseek', name: '高级模型', provider: 'DeepSeek-V3.2', requiresAuth: true, hasVision: false, hasDeepThink: true, hasWebSearch: true }
+  { id: 'siliconflow', name: '基础模型', provider: 'Qwen 8B', requiresAuth: false, hasVision: false, hasDeepThink: true, hasWebSearch: false },
+  { id: 'deepseek', name: '高级模型', provider: '最强满血 DeepSeek', requiresAuth: true, hasVision: false, hasDeepThink: true, hasWebSearch: true }
 ]
 
 // 状态
@@ -655,6 +672,7 @@ onShow(async () => {
 
 // 初始化
 onMounted(async () => {
+  await fetchAppName()
   await checkLoginAndInit()
 })
 

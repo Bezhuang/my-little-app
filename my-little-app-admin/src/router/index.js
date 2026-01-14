@@ -15,6 +15,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/setup',
+    name: 'Setup',
+    component: () => import('../views/setup/index.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/',
     component: () => import('../layouts/MainLayout.vue'),
     redirect: '/dashboard',
@@ -71,11 +77,39 @@ const router = createRouter({
   routes
 })
 
+// 检查是否需要初始化
+const checkNeedsSetup = async () => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    const res = await fetch(`${baseUrl}/api/setup/status`)
+    const data = await res.json()
+    if (data.success && data.data.needsSetup) {
+      return true
+    }
+  } catch (error) {
+    console.error('检查初始化状态失败:', error)
+  }
+  return false
+}
+
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
+  // 如果访问 setup 页面，直接放行
+  if (to.path === '/setup') {
+    next()
+    return
+  }
+
+  // 如果未登录且不是登录/忘记密码页面，检查是否需要初始化
   if (to.meta.requiresAuth !== false && !userStore.isLoggedIn) {
+    // 先检查是否需要初始化
+    const needsSetup = await checkNeedsSetup()
+    if (needsSetup) {
+      next('/setup')
+      return
+    }
     next('/login')
   } else if (to.path === '/login' && userStore.isLoggedIn) {
     next('/dashboard')
