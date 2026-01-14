@@ -69,6 +69,11 @@
 			<id>central</id>
 			<url>https://repo.maven.apache.org/maven2</url>
 		</pluginRepository>
+		<pluginRepository>
+			<id>spring</id>
+			<name>Spring Repository</name>
+			<url>https://repo.spring.io/release</url>
+		</pluginRepository>
 	</pluginRepositories>
 
 	<dependencies>
