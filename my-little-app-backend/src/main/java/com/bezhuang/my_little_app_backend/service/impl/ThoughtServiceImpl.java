@@ -3,6 +3,7 @@ package com.bezhuang.my_little_app_backend.service.impl;
 import com.bezhuang.my_little_app_backend.dto.PageResult;
 import com.bezhuang.my_little_app_backend.entity.Thought;
 import com.bezhuang.my_little_app_backend.mapper.ThoughtMapper;
+import com.bezhuang.my_little_app_backend.service.CacheService;
 import com.bezhuang.my_little_app_backend.service.ThoughtService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +17,14 @@ import java.util.List;
 public class ThoughtServiceImpl implements ThoughtService {
 
     private final ThoughtMapper thoughtMapper;
+    private final CacheService cacheService;
 
-    public ThoughtServiceImpl(ThoughtMapper thoughtMapper) {
+    private static final String THOUGHT_CACHE_PREFIX = "thought:";
+    private static final long THOUGHT_CACHE_TTL = 600; // 10分钟
+
+    public ThoughtServiceImpl(ThoughtMapper thoughtMapper, CacheService cacheService) {
         this.thoughtMapper = thoughtMapper;
+        this.cacheService = cacheService;
     }
 
     @Override
@@ -60,11 +66,14 @@ public class ThoughtServiceImpl implements ThoughtService {
 
     @Override
     public Thought getById(Long id) {
-        Thought thought = thoughtMapper.selectById(id);
-        if (thought != null) {
-            thought.setImageIds(thought.getImageIds());
-        }
-        return thought;
+        String cacheKey = THOUGHT_CACHE_PREFIX + id;
+        return cacheService.getOrLoad(cacheKey, Thought.class, () -> {
+            Thought thought = thoughtMapper.selectById(id);
+            if (thought != null) {
+                thought.setImageIds(thought.getImageIds());
+            }
+            return thought;
+        });
     }
 
     @Override
@@ -96,7 +105,12 @@ public class ThoughtServiceImpl implements ThoughtService {
             throw new RuntimeException("想法不存在");
         }
 
-        return thoughtMapper.update(thought) > 0;
+        boolean result = thoughtMapper.update(thought) > 0;
+        if (result) {
+            // 清除想法缓存
+            cacheService.delete(THOUGHT_CACHE_PREFIX + thought.getId());
+        }
+        return result;
     }
 
     @Override
@@ -106,7 +120,12 @@ public class ThoughtServiceImpl implements ThoughtService {
         if (thought == null) {
             throw new RuntimeException("想法不存在");
         }
-        return thoughtMapper.deleteById(id) > 0;
+        boolean result = thoughtMapper.deleteById(id) > 0;
+        if (result) {
+            // 清除想法缓存
+            cacheService.delete(THOUGHT_CACHE_PREFIX + id);
+        }
+        return result;
     }
 
     @Override
@@ -117,7 +136,12 @@ public class ThoughtServiceImpl implements ThoughtService {
             throw new RuntimeException("想法不存在");
         }
         int newCount = (thought.getLikeCount() == null ? 0 : thought.getLikeCount()) + 1;
-        return thoughtMapper.updateLikeCount(id, newCount) > 0;
+        boolean result = thoughtMapper.updateLikeCount(id, newCount) > 0;
+        if (result) {
+            // 清除想法缓存（因为点赞数变了）
+            cacheService.delete(THOUGHT_CACHE_PREFIX + id);
+        }
+        return result;
     }
 
     @Override
@@ -129,7 +153,11 @@ public class ThoughtServiceImpl implements ThoughtService {
         }
         int current = thought.getLikeCount() == null ? 0 : thought.getLikeCount();
         int newCount = Math.max(0, current - 1);
-        return thoughtMapper.updateLikeCount(id, newCount) > 0;
+        boolean result = thoughtMapper.updateLikeCount(id, newCount) > 0;
+        if (result) {
+            cacheService.delete(THOUGHT_CACHE_PREFIX + id);
+        }
+        return result;
     }
 
     @Override
@@ -139,6 +167,7 @@ public class ThoughtServiceImpl implements ThoughtService {
         if (thought != null) {
             int newCount = (thought.getCommentCount() == null ? 0 : thought.getCommentCount()) + 1;
             thoughtMapper.updateCommentCount(id, newCount);
+            cacheService.delete(THOUGHT_CACHE_PREFIX + id);
         }
     }
 
@@ -150,6 +179,7 @@ public class ThoughtServiceImpl implements ThoughtService {
             int current = thought.getCommentCount() == null ? 0 : thought.getCommentCount();
             int newCount = Math.max(0, current - 1);
             thoughtMapper.updateCommentCount(id, newCount);
+            cacheService.delete(THOUGHT_CACHE_PREFIX + id);
         }
     }
 }

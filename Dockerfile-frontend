@@ -1,0 +1,105 @@
+# ==================== 前端 H5 构建 ====================
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# 使用阿里云镜像源（国内加速）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# 安装 git 和 pnpm（使用阿里 npm 镜像）
+RUN apk add --no-cache git && \
+    npm config set registry https://registry.npmmirror.com && \
+    npm install -g pnpm
+
+# 接收构建参数
+ARG VITE_API_BASE_URL
+ARG VITE_WEIXIN_APPID
+
+# 创建 .env 文件供 Vite 使用
+RUN echo "VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8080}" > .env && \
+    echo "VITE_WEIXIN_APPID=${VITE_WEIXIN_APPID:-}" >> .env
+
+# 配置 pnpm 混合源（阿里镜像为主，官方源为辅回退）
+# 注意：tdesign-web-components 在 npmmirror 不存在，需要从官方源获取
+# 因此不使用 --frozen-lockfile，让 pnpm 重新解析依赖
+COPY <<'EOF' .npmrc
+# 主镜像使用阿里 npmmirror（国内加速）
+registry=https://registry.npmmirror.com
+
+# 官方源作为备用（当阿里源没有该包时回退）
+fetch-retries=3
+fetch-retry-mintimeout=10000
+fetch-retry-maxtimeout=60000
+
+# 特定包需要官方源（保留官方原始版本）
+@tdesign:registry=https://registry.npmjs.org/
+@dcloudio:registry=https://registry.npmjs.org/
+
+# GitHub 依赖加速
+enable-pre-post-scripts=true
+EOF
+
+COPY my-little-app-frontend/ ./
+# 删除 lockfile 重新解析（因为 tdesign-web-components 在 npmmirror 不存在）
+RUN rm -f pnpm-lock.yaml && \
+    pnpm install && \
+    pnpm run build:h5
+
+# ==================== 管理后台构建 ====================
+FROM node:20-alpine AS admin-builder
+
+WORKDIR /app/admin
+
+# 使用阿里云镜像源（国内加速）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+RUN apk add --no-cache git && \
+    npm config set registry https://registry.npmmirror.com && \
+    npm install -g pnpm
+
+# 配置 pnpm 混合源（阿里镜像为主，官方源为辅回退）
+COPY <<'EOF' .npmrc
+# 主镜像使用阿里 npmmirror（国内加速）
+registry=https://registry.npmmirror.com
+
+# 官方源作为备用
+fetch-retries=3
+fetch-retry-mintimeout=10000
+fetch-retry-maxtimeout=60000
+
+# element-plus 官方源（保持与官方同步）
+@element-plus:registry=https://registry.npmjs.org/
+EOF
+
+COPY my-little-app-admin/ ./
+RUN pnpm install --frozen-lockfile && pnpm run build
+
+# ==================== Nginx 运行阶段 ====================
+FROM nginx:alpine
+
+# 使用阿里云镜像源（国内加速）
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# 安装时区工具
+RUN apk add --no-cache tzdata
+
+# 复制时区配置
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 复制构建产物
+COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html/h5
+COPY --from=admin-builder /app/admin/dist /usr/share/nginx/html/admin
+
+# 复制启动脚本（根据协议自动生成 nginx 配置）
+COPY nginx-entrypoint.sh /nginx-entrypoint.sh
+RUN chmod +x /nginx-entrypoint.sh
+
+# 创建 SSL 目录
+RUN mkdir -p /etc/nginx/ssl
+
+# 暴露端口
+# 80: HTTP (H5), 8081: HTTP/S (Admin), 8443: HTTPS (API)
+EXPOSE 80 8081 8443
+
+CMD ["/nginx-entrypoint.sh"]

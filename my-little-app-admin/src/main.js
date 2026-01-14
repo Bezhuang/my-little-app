@@ -8,6 +8,7 @@ import 'element-plus/dist/index.css'
 import App from './App.vue'
 import router from './router'
 import './assets/styles/main.css'
+import { getAppName } from './composables/useAppConfig'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -21,6 +22,15 @@ app.use(pinia)
 app.use(router)
 app.use(ElementPlus, {
   locale: zhCn,
+})
+
+// 初始化应用配置
+getAppName().then((name) => {
+  // 更新页面标题
+  const titleEl = document.getElementById('page-title')
+  if (titleEl) {
+    titleEl.textContent = `${name} - 管理后台`
+  }
 })
 
 app.mount('#app')

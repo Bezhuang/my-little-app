@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bezhuang.my_little_app_backend.mapper.SystemConfigMapper">
+
+    <select id="selectByConfigKey" resultType="com.bezhuang.my_little_app_backend.entity.SystemConfig">
+        SELECT * FROM system_config WHERE config_key = #{configKey}
+    </select>
+
+    <update id="updateConfigValue">
+        UPDATE system_config SET config_value = #{configValue} WHERE config_key = #{configKey}
+    </update>
+
+    <insert id="insert" parameterType="com.bezhuang.my_little_app_backend.entity.SystemConfig">
+        INSERT INTO system_config (config_key, config_value, description, created_at, updated_at)
+        VALUES (#{configKey}, #{configValue}, #{description}, NOW(), NOW())
+    </insert>
+
+</mapper>

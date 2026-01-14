@@ -11,7 +11,7 @@
       <view class="logo-wrapper">
         <uni-icons type="person-filled" size="60" color="#fff"></uni-icons>
       </view>
-      <text class="app-name">My Little App</text>
+      <text class="app-name">{{ appName }}</text>
       <text class="app-desc">欢迎回来</text>
     </view>
     
@@ -94,16 +94,37 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { BASE_URL } from '../../constant.js'
 import userStore from '../../store/user'
 
 const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(true)
+const appName = ref('My Little App')
 
 const formData = reactive({
   username: '',
   password: ''
+})
+
+// 获取应用名称
+const fetchAppName = async () => {
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL}/api/setup/app-name`,
+      method: 'GET'
+    })
+    if (res[1].statusCode === 200 && res[1].data.success) {
+      appName.value = res[1].data.data
+    }
+  } catch (error) {
+    console.error('获取应用名称失败:', error)
+  }
+}
+
+onMounted(() => {
+  fetchAppName()
 })
 
 // 表单验证

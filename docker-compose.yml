@@ -1,0 +1,86 @@
+services:
+  # ==================== MySQL 数据库 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: my-little-app-mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-my_little_app}
+    # 不暴露端口到宿主机，仅 Docker 内部访问
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Redis 缓存 ====================
+  redis:
+    image: redis:7-alpine
+    container_name: my-little-app-redis
+    restart: unless-stopped
+    # 不暴露端口到宿主机，仅 Docker 内部访问
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== 后端服务 ====================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile-backend
+    container_name: my-little-app-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT_BACKEND:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ==================== 前端 H5 + 管理后台 + Nginx ====================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile-frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_WEIXIN_APPID: ${VITE_WEIXIN_APPID:-}
+    container_name: my-little-app-frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT_FRONTEND:-80}:80"
+      - "${PORT_ADMIN:-8081}:8081"
+      - "${PORT_API:-8443}:8443"
+    volumes:
+      # SSL 证书挂载（可选，如果不需要 SSL 可注释掉）
+      - ./ssl:/etc/nginx/ssl:ro
+    environment:
+      # 域名配置（带 http:// 或 https:// 前缀）
+      DOMAIN_NAME: ${DOMAIN_NAME:-http://localhost}
+      # SSL 证书路径（使用 HTTPS 时必须配置）
+      SSL_CERT: ${SSL_CERT:-}
+      SSL_KEY: ${SSL_KEY:-}
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  redis_data:

@@ -31,18 +31,10 @@ my-little-app-backend/.mvn/wrapper/maven-wrapper.jar
 # ====================
 # Configuration (Sensitive)
 # ====================
-application.properties
-application.yml
-application-secret.yml
 *.pem
 *.keystore
 *.jks
-
-# ====================
-# Sensitive Constants
-# ====================
-my-little-app-frontend/src/constant.js
-my-little-app-admin/src/constant.js
+ssl/
 
 # ====================
 # Logs
@@ -83,3 +75,9 @@ Thumbs.db
 *.temp
 *.bak
 *.backup
+
+# ====================
+# Database Backups
+# ====================
+backups/
+migration_*.tar.gz

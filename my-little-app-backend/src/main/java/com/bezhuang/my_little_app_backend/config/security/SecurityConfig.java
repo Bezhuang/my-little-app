@@ -87,6 +87,7 @@ public class SecurityConfig {
                 // 公开接口
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/setup/**").permitAll()
                 .requestMatchers("/api/thoughts/**").permitAll()
                 .requestMatchers("/error").permitAll()
 

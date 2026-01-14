@@ -1,11 +1,17 @@
 <script setup>
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue'
 import { BASE_URL } from '../../constant'
+import { getAppName } from '../../composables/useAppConfig'
 
 const router = useRouter()
+const appName = ref('My Little App')
+
+onMounted(async () => {
+  appName.value = await getAppName()
+})
 
 const step = ref(1)
 const loading = ref(false)
@@ -205,7 +211,7 @@ onUnmounted(() => {
           <div class="brand-icon">
             <el-icon size="48"><Management /></el-icon>
           </div>
-          <h1 class="brand-title">My Little App</h1>
+          <h1 class="brand-title">{{ appName }}</h1>
           <p class="brand-subtitle">后台管理系统</p>
           <div class="brand-features">
             <div class="feature-item">
