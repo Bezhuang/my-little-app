@@ -1,65 +1,46 @@
 package com.bezhuang.my_little_app_backend.config.ai;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.bezhuang.my_little_app_backend.service.AiConfigService;
+import org.springframework.stereotype.Component;
 
 /**
- * 硅基流动 API 配置
+ * SiliconFlow AI 配置类
+ * 从数据库读取配置
  */
-@ConfigurationProperties(prefix = "siliconflow")
+@Component
 public class SiliconFlowConfig {
 
-    private String apiKey;
-    private String baseUrl;  // 匹配 siliconflow.base-url
-    private String model;
-    private String reasonerModel;  // 推理模型
-    private int maxTokens;
-    private double temperature;
+    private final AiConfigService aiConfigService;
 
-    public String getApiKey() {
-        return apiKey;
+    public SiliconFlowConfig(AiConfigService aiConfigService) {
+        this.aiConfigService = aiConfigService;
     }
 
-    public void setApiKey(String apiKey) {
-        this.apiKey = apiKey;
+    public String getApiKey() {
+        return aiConfigService.getSiliconFlowApiKey();
     }
 
     public String getBaseUrl() {
-        return baseUrl;
-    }
-
-    public void setBaseUrl(String baseUrl) {
-        this.baseUrl = baseUrl;
+        return aiConfigService.getSiliconFlowBaseUrl();
     }
 
     public String getModel() {
-        return model;
-    }
-
-    public void setModel(String model) {
-        this.model = model;
+        return aiConfigService.getSiliconFlowModel();
     }
 
     public String getReasonerModel() {
-        return reasonerModel;
-    }
-
-    public void setReasonerModel(String reasonerModel) {
-        this.reasonerModel = reasonerModel;
+        return aiConfigService.getSiliconFlowReasonerModel();
     }
 
     public int getMaxTokens() {
-        return maxTokens;
-    }
-
-    public void setMaxTokens(int maxTokens) {
-        this.maxTokens = maxTokens;
+        return aiConfigService.getSiliconFlowMaxTokens();
     }
 
     public double getTemperature() {
-        return temperature;
+        return aiConfigService.getSiliconFlowTemperature();
     }
 
-    public void setTemperature(double temperature) {
-        this.temperature = temperature;
+    public boolean isEnabled() {
+        return aiConfigService.isSiliconFlowEnabled();
     }
 }

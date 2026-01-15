@@ -197,10 +197,21 @@ const handleToolClick = (tool) => {
     currentTool.value = tool
     showStopwatch.value = true
   } else if (tool.url) {
-    // 跳转到 webview 页面，小程序会自动显示返回按钮
+    // #ifdef H5
+    // H5/PC 跳转到 webview 页面
     uni.navigateTo({
       url: `/pages/webview/index?url=${encodeURIComponent(tool.url)}&title=${encodeURIComponent(tool.name)}`
     })
+    // #endif
+    // #ifdef MP-WEIXIN
+    // 小程序显示提示
+    uni.showModal({
+      title: '提示',
+      content: '如需浏览，请长按网址复制后使用浏览器访问 https://bezhuang.cn',
+      showCancel: false,
+      confirmText: '我知道了'
+    })
+    // #endif
   } else {
     uni.showToast({
       title: `${tool.name} 功能开发中`,

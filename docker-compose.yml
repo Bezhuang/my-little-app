@@ -1,7 +1,7 @@
 services:
   # ==================== MySQL 数据库 ====================
   mysql:
-    image: mysql:8.0
+    image: mysql:5.7.44
     container_name: my-little-app-mysql
     restart: unless-stopped
     env_file:

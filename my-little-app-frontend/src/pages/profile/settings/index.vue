@@ -100,7 +100,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onShow, getStorageSync, setStorageSync } from '@dcloudio/uni-app'
+import { onShow } from '@dcloudio/uni-app'
 import userStore from '../../../store/user'
 
 const rechargePopup = ref(null)
@@ -135,7 +135,7 @@ const setSignInDate = (date) => {
   localStorage.setItem('lastSignInDate', date)
   // #endif
   // #ifndef H5
-  setStorageSync('lastSignInDate', date)
+  uni.setStorageSync('lastSignInDate', date)
   // #endif
 }
 
@@ -145,7 +145,7 @@ const getSignInDate = () => {
   return localStorage.getItem('lastSignInDate')
   // #endif
   // #ifndef H5
-  return getStorageSync('lastSignInDate')
+  return uni.getStorageSync('lastSignInDate')
   // #endif
 }
 
@@ -174,8 +174,19 @@ const goBack = () => {
 
 // 签到
 const onSignIn = async () => {
-  if (!userStore.state.isLogin) {
-    uni.showToast({ title: '请先登录', icon: 'none' })
+  // 重新初始化以确保获取最新状态
+  userStore.init()
+  if (!userStore.state.isLogin || !userStore.state.userInfo) {
+    uni.showModal({
+      title: '提示',
+      content: '请先登录后再签到',
+      confirmText: '去登录',
+      success: (res) => {
+        if (res.confirm) {
+          uni.switchTab({ url: '/pages/login/index' })
+        }
+      }
+    })
     return
   }
   if (hasSignedToday.value || isSigningIn.value) {
@@ -188,7 +199,7 @@ const onSignIn = async () => {
       url: '/api/user/signin',
       method: 'POST',
       header: {
-        'Authorization': 'Bearer ' + userStore.state.token
+        'Authorization': 'Bearer ' + userStore.state.userInfo.token
       }
     })
 
@@ -200,10 +211,24 @@ const onSignIn = async () => {
 
       // 更新本地显示
       userStore.state.userInfo.remainingTokens = res.data.data.newTokens
+      uni.setStorageSync('userInfo', userStore.state.userInfo)
 
       uni.showToast({
         title: `签到成功 +3000 tokens`,
         icon: 'success'
+      })
+    } else if (res.statusCode === 401) {
+      // token 过期，清除登录状态
+      uni.showModal({
+        title: '登录已过期',
+        content: '请重新登录',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            userStore.logout()
+            uni.switchTab({ url: '/pages/login/index' })
+          }
+        }
       })
     } else {
       uni.showToast({

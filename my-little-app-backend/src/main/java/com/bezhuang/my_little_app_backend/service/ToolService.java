@@ -128,9 +128,8 @@ public class ToolService {
      */
     public String getToolsPrompt(boolean includeWebSearch) {
         StringBuilder sb = new StringBuilder();
-        sb.append("【思考过程】每轮思考控制在50字以内，用1-2个要点概括即可。\n");
-        sb.append("【工具列表】get_current_time:查询当前时间, web_search:联网搜索实时数据。\n");
-        sb.append("仅必要时调用工具获取数据，不编造。");
+        sb.append("【工具】get_current_time:查询时间, web_search:联网搜索。\n");
+        sb.append("【要求】直接给出答案。每个工具最多调用一次，不要重复调用。");
         return sb.toString();
     }
 

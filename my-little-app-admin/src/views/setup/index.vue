@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { BASE_URL } from '../../constant'
 
 const router = useRouter()
 
@@ -50,8 +51,7 @@ const formRef = ref(null)
 
 const checkSetupStatus = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-    const res = await fetch(`${baseUrl}/api/setup/status`)
+    const res = await fetch(`${BASE_URL}/api/setup/status`)
     const data = await res.json()
 
     if (data.success && !data.data.needsSetup) {
@@ -72,8 +72,7 @@ const handleSetup = async () => {
       loading.value = true
 
       try {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-        const res = await fetch(`${baseUrl}/api/setup/admin`, {
+        const res = await fetch(`${BASE_URL}/api/setup/admin`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

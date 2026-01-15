@@ -1,18 +1,18 @@
-package com.bezhuang.my_little_app_backend.config.websearch;
+package com.bezhuang.my_little_app_backend.config.ai;
 
 import com.bezhuang.my_little_app_backend.service.AiConfigService;
 import org.springframework.stereotype.Component;
 
 /**
- * 博查AI Web Search API 配置
+ * Bocha Web Search API 配置类
  * 从数据库读取配置
  */
 @Component
-public class BochaWebSearchConfig {
+public class BochaConfig {
 
     private final AiConfigService aiConfigService;
 
-    public BochaWebSearchConfig(AiConfigService aiConfigService) {
+    public BochaConfig(AiConfigService aiConfigService) {
         this.aiConfigService = aiConfigService;
     }
 
@@ -26,10 +26,5 @@ public class BochaWebSearchConfig {
 
     public int getSearchLimit() {
         return aiConfigService.getBochaSearchLimit();
-    }
-
-    public boolean isConfigured() {
-        String apiKey = getApiKey();
-        return apiKey != null && !apiKey.isEmpty() && !apiKey.equals("YOUR-BOCHA-API-KEY-HERE");
     }
 }

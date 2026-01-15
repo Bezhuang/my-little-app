@@ -86,7 +86,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const scrollTop = ref(0) // 滚动位置
 const initialized = ref(false) // 标记是否已初始化
-const appName = ref('我的博客')
+const appName = ref('My Little App')
 
 // 获取应用名称
 const fetchAppName = async () => {
@@ -95,8 +95,8 @@ const fetchAppName = async () => {
       url: `${BASE_URL}/api/setup/app-name`,
       method: 'GET'
     })
-    if (res[1].statusCode === 200 && res[1].data.success) {
-      appName.value = res[1].data.data
+    if (res.statusCode === 200 && res.data && res.data.success) {
+      appName.value = res.data.data
     }
   } catch (error) {
     console.error('获取应用名称失败:', error)

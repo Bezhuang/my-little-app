@@ -249,6 +249,30 @@ export const aiApi = {
       tokensRemaining,
       searchRemaining
     })
+  },
+
+  // DeepSeek AI 配置
+  getDeepSeekConfig: () => {
+    return request.get('/admin/ai/config/deepseek')
+  },
+  updateDeepSeekConfig: (data) => {
+    return request.put('/admin/ai/config/deepseek', data)
+  },
+
+  // SiliconFlow AI 配置
+  getSiliconFlowConfig: () => {
+    return request.get('/admin/ai/config/siliconflow')
+  },
+  updateSiliconFlowConfig: (data) => {
+    return request.put('/admin/ai/config/siliconflow', data)
+  },
+
+  // Bocha Web Search 配置
+  getBochaConfig: () => {
+    return request.get('/admin/ai/config/bocha')
+  },
+  updateBochaConfig: (data) => {
+    return request.put('/admin/ai/config/bocha', data)
   }
 }
 

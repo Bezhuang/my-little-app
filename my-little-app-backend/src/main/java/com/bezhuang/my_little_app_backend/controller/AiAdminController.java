@@ -8,6 +8,7 @@ import com.bezhuang.my_little_app_backend.mapper.AiConfigMapper;
 import com.bezhuang.my_little_app_backend.mapper.ApiUsageMapper;
 import com.bezhuang.my_little_app_backend.mapper.AdminMapper;
 import com.bezhuang.my_little_app_backend.mapper.UserMapper;
+import com.bezhuang.my_little_app_backend.service.AiConfigService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -30,14 +31,17 @@ public class AiAdminController {
     private final ApiUsageMapper apiUsageMapper;
     private final AdminMapper adminMapper;
     private final UserMapper userMapper;
+    private final AiConfigService aiConfigService;
 
     public AiAdminController(AiConfigMapper aiConfigMapper, ApiUsageService apiUsageService,
-                            ApiUsageMapper apiUsageMapper, AdminMapper adminMapper, UserMapper userMapper) {
+                            ApiUsageMapper apiUsageMapper, AdminMapper adminMapper, UserMapper userMapper,
+                            AiConfigService aiConfigService) {
         this.aiConfigMapper = aiConfigMapper;
         this.apiUsageService = apiUsageService;
         this.apiUsageMapper = apiUsageMapper;
         this.adminMapper = adminMapper;
         this.userMapper = userMapper;
+        this.aiConfigService = aiConfigService;
     }
 
     /**
@@ -88,6 +92,8 @@ public class AiAdminController {
                 newConfig.setDescription("AI助手系统提示词");
                 aiConfigMapper.insert(newConfig);
             }
+            // 清除缓存
+            aiConfigService.clearCache();
             return ResponseEntity.ok(Map.of("success", true, "message", "更新成功"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新失败: " + e.getMessage()));
@@ -148,6 +154,8 @@ public class AiAdminController {
                 newConfig.setDescription("AI模型温度参数 (0.0-2.0)");
                 aiConfigMapper.insert(newConfig);
             }
+            // 清除缓存
+            aiConfigService.clearCache();
             return ResponseEntity.ok(Map.of("success", true, "message", "更新成功"));
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "温度值必须是有效的数字"));
@@ -249,6 +257,205 @@ public class AiAdminController {
             ));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新配额失败: " + e.getMessage()));
+        }
+    }
+
+    // ==================== DeepSeek AI 配置 ====================
+
+    /**
+     * 获取 DeepSeek AI 配置
+     */
+    @GetMapping("/config/deepseek")
+    public ResponseEntity<Map<String, Object>> getDeepSeekConfig() {
+        AiConfig apiKeyConfig = aiConfigMapper.selectByConfigKey("deepseek_api_key");
+        AiConfig modelConfig = aiConfigMapper.selectByConfigKey("deepseek_model");
+        AiConfig reasonerModelConfig = aiConfigMapper.selectByConfigKey("deepseek_reasoner_model");
+        AiConfig baseUrlConfig = aiConfigMapper.selectByConfigKey("deepseek_base_url");
+        AiConfig maxTokensConfig = aiConfigMapper.selectByConfigKey("deepseek_max_tokens");
+        AiConfig temperatureConfig = aiConfigMapper.selectByConfigKey("deepseek_temperature");
+        AiConfig enabledConfig = aiConfigMapper.selectByConfigKey("deepseek_enabled");
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "apiKey", apiKeyConfig != null ? apiKeyConfig.getConfigValue() : "",
+                        "model", modelConfig != null ? modelConfig.getConfigValue() : "deepseek-chat",
+                        "reasonerModel", reasonerModelConfig != null ? reasonerModelConfig.getConfigValue() : "deepseek-reasoner",
+                        "baseUrl", baseUrlConfig != null ? baseUrlConfig.getConfigValue() : "https://api.deepseek.com",
+                        "maxTokens", maxTokensConfig != null ? maxTokensConfig.getConfigValue() : "4096",
+                        "temperature", temperatureConfig != null ? temperatureConfig.getConfigValue() : "0.7",
+                        "enabled", enabledConfig != null ? enabledConfig.getConfigValue() : "true"
+                )
+        ));
+    }
+
+    /**
+     * 更新 DeepSeek AI 配置
+     */
+    @PutMapping("/config/deepseek")
+    public ResponseEntity<Map<String, Object>> updateDeepSeekConfig(@RequestBody Map<String, String> request) {
+        try {
+            String apiKey = request.get("apiKey");
+            String model = request.get("model");
+            String reasonerModel = request.get("reasonerModel");
+            String baseUrl = request.get("baseUrl");
+            String maxTokens = request.get("maxTokens");
+            String temperature = request.get("temperature");
+            String enabled = request.get("enabled");
+
+            // 更新 API Key
+            updateOrInsertConfig("deepseek_api_key", apiKey != null ? apiKey : "", "DeepSeek API Key");
+            // 更新模型
+            updateOrInsertConfig("deepseek_model", model != null ? model : "deepseek-chat", "DeepSeek 模型名称");
+            // 更新 Reasoner 模型
+            updateOrInsertConfig("deepseek_reasoner_model", reasonerModel != null ? reasonerModel : "deepseek-reasoner", "DeepSeek Reasoner 模型名称");
+            // 更新 Base URL
+            updateOrInsertConfig("deepseek_base_url", baseUrl != null ? baseUrl : "https://api.deepseek.com", "DeepSeek API Base URL");
+            // 更新最大 Token 数
+            updateOrInsertConfig("deepseek_max_tokens", maxTokens != null ? maxTokens : "4096", "DeepSeek 最大 Token 数");
+            // 更新温度参数
+            updateOrInsertConfig("deepseek_temperature", temperature != null ? temperature : "0.7", "DeepSeek 温度参数");
+            // 更新启用状态
+            updateOrInsertConfig("deepseek_enabled", enabled != null ? enabled : "true", "是否启用 DeepSeek");
+
+            // 清除缓存
+            aiConfigService.clearCache();
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "DeepSeek 配置更新成功"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新失败: " + e.getMessage()));
+        }
+    }
+
+    // ==================== SiliconFlow AI 配置 ====================
+
+    /**
+     * 获取 SiliconFlow AI 配置
+     */
+    @GetMapping("/config/siliconflow")
+    public ResponseEntity<Map<String, Object>> getSiliconFlowConfig() {
+        AiConfig apiKeyConfig = aiConfigMapper.selectByConfigKey("siliconflow_api_key");
+        AiConfig modelConfig = aiConfigMapper.selectByConfigKey("siliconflow_model");
+        AiConfig reasonerModelConfig = aiConfigMapper.selectByConfigKey("siliconflow_reasoner_model");
+        AiConfig baseUrlConfig = aiConfigMapper.selectByConfigKey("siliconflow_base_url");
+        AiConfig maxTokensConfig = aiConfigMapper.selectByConfigKey("siliconflow_max_tokens");
+        AiConfig temperatureConfig = aiConfigMapper.selectByConfigKey("siliconflow_temperature");
+        AiConfig enabledConfig = aiConfigMapper.selectByConfigKey("siliconflow_enabled");
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "apiKey", apiKeyConfig != null ? apiKeyConfig.getConfigValue() : "",
+                        "model", modelConfig != null ? modelConfig.getConfigValue() : "deepseek-ai/DeepSeek-V2.5",
+                        "reasonerModel", reasonerModelConfig != null ? reasonerModelConfig.getConfigValue() : "deepseek-ai/DeepSeek-V2.5",
+                        "baseUrl", baseUrlConfig != null ? baseUrlConfig.getConfigValue() : "https://api.siliconflow.cn/v1",
+                        "maxTokens", maxTokensConfig != null ? maxTokensConfig.getConfigValue() : "4096",
+                        "temperature", temperatureConfig != null ? temperatureConfig.getConfigValue() : "0.7",
+                        "enabled", enabledConfig != null ? enabledConfig.getConfigValue() : "false"
+                )
+        ));
+    }
+
+    /**
+     * 更新 SiliconFlow AI 配置
+     */
+    @PutMapping("/config/siliconflow")
+    public ResponseEntity<Map<String, Object>> updateSiliconFlowConfig(@RequestBody Map<String, String> request) {
+        try {
+            String apiKey = request.get("apiKey");
+            String model = request.get("model");
+            String reasonerModel = request.get("reasonerModel");
+            String baseUrl = request.get("baseUrl");
+            String maxTokens = request.get("maxTokens");
+            String temperature = request.get("temperature");
+            String enabled = request.get("enabled");
+
+            // 更新 API Key
+            updateOrInsertConfig("siliconflow_api_key", apiKey != null ? apiKey : "", "SiliconFlow API Key");
+            // 更新模型
+            updateOrInsertConfig("siliconflow_model", model != null ? model : "deepseek-ai/DeepSeek-V2.5", "SiliconFlow 模型名称");
+            // 更新 Reasoner 模型
+            updateOrInsertConfig("siliconflow_reasoner_model", reasonerModel != null ? reasonerModel : "deepseek-ai/DeepSeek-V2.5", "SiliconFlow Reasoner 模型名称");
+            // 更新 Base URL
+            updateOrInsertConfig("siliconflow_base_url", baseUrl != null ? baseUrl : "https://api.siliconflow.cn/v1", "SiliconFlow API Base URL");
+            // 更新最大 Token 数
+            updateOrInsertConfig("siliconflow_max_tokens", maxTokens != null ? maxTokens : "4096", "SiliconFlow 最大 Token 数");
+            // 更新温度参数
+            updateOrInsertConfig("siliconflow_temperature", temperature != null ? temperature : "0.7", "SiliconFlow 温度参数");
+            // 更新启用状态
+            updateOrInsertConfig("siliconflow_enabled", enabled != null ? enabled : "false", "是否启用 SiliconFlow");
+
+            // 清除缓存
+            aiConfigService.clearCache();
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "SiliconFlow 配置更新成功"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新失败: " + e.getMessage()));
+        }
+    }
+
+    // ==================== Bocha Web Search API 配置 ====================
+
+    /**
+     * 获取 Bocha Web Search 配置
+     */
+    @GetMapping("/config/bocha")
+    public ResponseEntity<Map<String, Object>> getBochaConfig() {
+        AiConfig apiKeyConfig = aiConfigMapper.selectByConfigKey("bocha_api_key");
+        AiConfig enabledConfig = aiConfigMapper.selectByConfigKey("bocha_enabled");
+        AiConfig searchLimitConfig = aiConfigMapper.selectByConfigKey("bocha_search_limit");
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "apiKey", apiKeyConfig != null ? apiKeyConfig.getConfigValue() : "",
+                        "enabled", enabledConfig != null ? enabledConfig.getConfigValue() : "false",
+                        "searchLimit", searchLimitConfig != null ? searchLimitConfig.getConfigValue() : "5"
+                )
+        ));
+    }
+
+    /**
+     * 更新 Bocha Web Search 配置
+     */
+    @PutMapping("/config/bocha")
+    public ResponseEntity<Map<String, Object>> updateBochaConfig(@RequestBody Map<String, String> request) {
+        try {
+            String apiKey = request.get("apiKey");
+            String enabled = request.get("enabled");
+            String searchLimit = request.get("searchLimit");
+
+            // 更新 API Key
+            updateOrInsertConfig("bocha_api_key", apiKey != null ? apiKey : "", "Bocha Web Search API Key");
+            // 更新启用状态
+            updateOrInsertConfig("bocha_enabled", enabled != null ? enabled : "false", "是否启用 Bocha Web Search");
+            // 更新搜索限制
+            updateOrInsertConfig("bocha_search_limit", searchLimit != null ? searchLimit : "5", "Bocha 搜索结果数量限制");
+
+            // 清除缓存
+            aiConfigService.clearCache();
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Bocha 配置更新成功"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新失败: " + e.getMessage()));
+        }
+    }
+
+    // ==================== 通用配置方法 ====================
+
+    /**
+     * 更新或插入配置
+     */
+    private void updateOrInsertConfig(String configKey, String configValue, String description) {
+        AiConfig existing = aiConfigMapper.selectByConfigKey(configKey);
+        if (existing != null) {
+            aiConfigMapper.updateConfigValue(configKey, configValue);
+        } else {
+            AiConfig newConfig = new AiConfig();
+            newConfig.setConfigKey(configKey);
+            newConfig.setConfigValue(configValue);
+            newConfig.setDescription(description);
+            aiConfigMapper.insert(newConfig);
         }
     }
 }
