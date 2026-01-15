@@ -162,6 +162,156 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- DeepSeek AI 配置 -->
+    <el-card class="config-card">
+      <template #header>
+        <div class="card-header">
+          <span>DeepSeek AI 配置</span>
+          <el-button type="primary" @click="saveDeepSeekConfig" :loading="savingDeepSeek">
+            保存配置
+          </el-button>
+        </div>
+      </template>
+
+      <el-form label-position="top">
+        <el-form-item label="API Key">
+          <el-input
+            v-model="deepSeekConfig.apiKey"
+            type="password"
+            show-password
+            placeholder="请输入 DeepSeek API Key"
+          />
+        </el-form-item>
+        <el-form-item label="模型名称">
+          <el-input
+            v-model="deepSeekConfig.model"
+            placeholder="例如: deepseek-chat"
+          />
+        </el-form-item>
+        <el-form-item label="Reasoner 模型名称">
+          <el-input
+            v-model="deepSeekConfig.reasonerModel"
+            placeholder="例如: deepseek-reasoner"
+          />
+        </el-form-item>
+        <el-form-item label="Base URL">
+          <el-input
+            v-model="deepSeekConfig.baseUrl"
+            placeholder="例如: https://api.deepseek.com"
+          />
+        </el-form-item>
+        <el-form-item label="最大 Token 数">
+          <el-input-number
+            v-model="deepSeekConfig.maxTokens"
+            :min="1"
+            :max="100000"
+            controls-position="right"
+          />
+        </el-form-item>
+        <el-form-item label="启用 DeepSeek">
+          <el-switch v-model="deepSeekConfig.enabled" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+            {{ deepSeekConfig.enabled ? '已启用' : '已禁用' }}
+          </span>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- SiliconFlow AI 配置 -->
+    <el-card class="config-card">
+      <template #header>
+        <div class="card-header">
+          <span>SiliconFlow AI 配置</span>
+          <el-button type="primary" @click="saveSiliconFlowConfig" :loading="savingSiliconFlow">
+            保存配置
+          </el-button>
+        </div>
+      </template>
+
+      <el-form label-position="top">
+        <el-form-item label="API Key">
+          <el-input
+            v-model="siliconFlowConfig.apiKey"
+            type="password"
+            show-password
+            placeholder="请输入 SiliconFlow API Key"
+          />
+        </el-form-item>
+        <el-form-item label="模型名称">
+          <el-input
+            v-model="siliconFlowConfig.model"
+            placeholder="例如: deepseek-ai/DeepSeek-V2.5"
+          />
+        </el-form-item>
+        <el-form-item label="Reasoner 模型名称">
+          <el-input
+            v-model="siliconFlowConfig.reasonerModel"
+            placeholder="例如: deepseek-ai/DeepSeek-V2.5"
+          />
+        </el-form-item>
+        <el-form-item label="Base URL">
+          <el-input
+            v-model="siliconFlowConfig.baseUrl"
+            placeholder="例如: https://api.siliconflow.cn/v1"
+          />
+        </el-form-item>
+        <el-form-item label="最大 Token 数">
+          <el-input-number
+            v-model="siliconFlowConfig.maxTokens"
+            :min="1"
+            :max="100000"
+            controls-position="right"
+          />
+        </el-form-item>
+        <el-form-item label="启用 SiliconFlow">
+          <el-switch v-model="siliconFlowConfig.enabled" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+            {{ siliconFlowConfig.enabled ? '已启用' : '已禁用' }}
+          </span>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- Bocha Web Search API 配置 -->
+    <el-card class="config-card">
+      <template #header>
+        <div class="card-header">
+          <span>Bocha Web Search API 配置</span>
+          <el-button type="primary" @click="saveBochaConfig" :loading="savingBocha">
+            保存配置
+          </el-button>
+        </div>
+      </template>
+
+      <el-form label-position="top">
+        <el-form-item label="API Key">
+          <el-input
+            v-model="bochaConfig.apiKey"
+            type="password"
+            show-password
+            placeholder="请输入 Bocha Web Search API Key"
+          />
+        </el-form-item>
+        <el-form-item label="搜索结果数量限制">
+          <el-input-number
+            v-model="bochaConfig.searchLimit"
+            :min="1"
+            :max="20"
+            controls-position="right"
+          />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+            范围: 1-20
+          </span>
+        </el-form-item>
+        <el-form-item label="启用 Bocha Web Search">
+          <el-switch v-model="bochaConfig.enabled" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">
+            {{ bochaConfig.enabled ? '已启用' : '已禁用' }}
+          </span>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -186,6 +336,36 @@ const editingUser = ref(null)
 const editForm = reactive({
   tokensRemaining: 0,
   searchRemaining: 0
+})
+
+// DeepSeek AI 配置
+const savingDeepSeek = ref(false)
+const deepSeekConfig = reactive({
+  apiKey: '',
+  model: 'deepseek-chat',
+  reasonerModel: 'deepseek-reasoner',
+  baseUrl: 'https://api.deepseek.com',
+  maxTokens: 4096,
+  enabled: true
+})
+
+// SiliconFlow AI 配置
+const savingSiliconFlow = ref(false)
+const siliconFlowConfig = reactive({
+  apiKey: '',
+  model: 'deepseek-ai/DeepSeek-V2.5',
+  reasonerModel: 'deepseek-ai/DeepSeek-V2.5',
+  baseUrl: 'https://api.siliconflow.cn/v1',
+  maxTokens: 4096,
+  enabled: false
+})
+
+// Bocha Web Search API 配置
+const savingBocha = ref(false)
+const bochaConfig = reactive({
+  apiKey: '',
+  searchLimit: 5,
+  enabled: false
 })
 
 // 格式化数字
@@ -298,10 +478,115 @@ const saveQuota = async () => {
   }
 }
 
+// DeepSeek AI 配置相关方法
+const fetchDeepSeekConfig = async () => {
+  try {
+    const res = await aiApi.getDeepSeekConfig()
+    if (res && res.data) {
+      deepSeekConfig.apiKey = res.data.apiKey || ''
+      deepSeekConfig.model = res.data.model || 'deepseek-chat'
+      deepSeekConfig.reasonerModel = res.data.reasonerModel || 'deepseek-reasoner'
+      deepSeekConfig.baseUrl = res.data.baseUrl || 'https://api.deepseek.com'
+      deepSeekConfig.maxTokens = parseInt(res.data.maxTokens) || 4096
+      deepSeekConfig.enabled = res.data.enabled === 'true'
+    }
+  } catch (error) {
+    ElMessage.error('获取 DeepSeek 配置失败: ' + error.message)
+  }
+}
+
+const saveDeepSeekConfig = async () => {
+  try {
+    savingDeepSeek.value = true
+    await aiApi.updateDeepSeekConfig({
+      apiKey: deepSeekConfig.apiKey,
+      model: deepSeekConfig.model,
+      reasonerModel: deepSeekConfig.reasonerModel,
+      baseUrl: deepSeekConfig.baseUrl,
+      maxTokens: deepSeekConfig.maxTokens.toString(),
+      enabled: deepSeekConfig.enabled.toString()
+    })
+    ElMessage.success('DeepSeek 配置保存成功')
+  } catch (error) {
+    ElMessage.error('保存 DeepSeek 配置失败: ' + error.message)
+  } finally {
+    savingDeepSeek.value = false
+  }
+}
+
+// SiliconFlow AI 配置相关方法
+const fetchSiliconFlowConfig = async () => {
+  try {
+    const res = await aiApi.getSiliconFlowConfig()
+    if (res && res.data) {
+      siliconFlowConfig.apiKey = res.data.apiKey || ''
+      siliconFlowConfig.model = res.data.model || 'deepseek-ai/DeepSeek-V2.5'
+      siliconFlowConfig.reasonerModel = res.data.reasonerModel || 'deepseek-ai/DeepSeek-V2.5'
+      siliconFlowConfig.baseUrl = res.data.baseUrl || 'https://api.siliconflow.cn/v1'
+      siliconFlowConfig.maxTokens = parseInt(res.data.maxTokens) || 4096
+      siliconFlowConfig.enabled = res.data.enabled === 'true'
+    }
+  } catch (error) {
+    ElMessage.error('获取 SiliconFlow 配置失败: ' + error.message)
+  }
+}
+
+const saveSiliconFlowConfig = async () => {
+  try {
+    savingSiliconFlow.value = true
+    await aiApi.updateSiliconFlowConfig({
+      apiKey: siliconFlowConfig.apiKey,
+      model: siliconFlowConfig.model,
+      reasonerModel: siliconFlowConfig.reasonerModel,
+      baseUrl: siliconFlowConfig.baseUrl,
+      maxTokens: siliconFlowConfig.maxTokens.toString(),
+      enabled: siliconFlowConfig.enabled.toString()
+    })
+    ElMessage.success('SiliconFlow 配置保存成功')
+  } catch (error) {
+    ElMessage.error('保存 SiliconFlow 配置失败: ' + error.message)
+  } finally {
+    savingSiliconFlow.value = false
+  }
+}
+
+// Bocha Web Search API 配置相关方法
+const fetchBochaConfig = async () => {
+  try {
+    const res = await aiApi.getBochaConfig()
+    if (res && res.data) {
+      bochaConfig.apiKey = res.data.apiKey || ''
+      bochaConfig.searchLimit = parseInt(res.data.searchLimit) || 5
+      bochaConfig.enabled = res.data.enabled === 'true'
+    }
+  } catch (error) {
+    ElMessage.error('获取 Bocha 配置失败: ' + error.message)
+  }
+}
+
+const saveBochaConfig = async () => {
+  try {
+    savingBocha.value = true
+    await aiApi.updateBochaConfig({
+      apiKey: bochaConfig.apiKey,
+      searchLimit: bochaConfig.searchLimit.toString(),
+      enabled: bochaConfig.enabled.toString()
+    })
+    ElMessage.success('Bocha 配置保存成功')
+  } catch (error) {
+    ElMessage.error('保存 Bocha 配置失败: ' + error.message)
+  } finally {
+    savingBocha.value = false
+  }
+}
+
 onMounted(() => {
   fetchSystemPrompt()
   fetchTemperature()
   fetchQuotaList()
+  fetchDeepSeekConfig()
+  fetchSiliconFlowConfig()
+  fetchBochaConfig()
 })
 </script>
 

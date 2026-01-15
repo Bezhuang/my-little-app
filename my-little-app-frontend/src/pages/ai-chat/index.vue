@@ -11,6 +11,7 @@
     <!-- 消息区域 -->
     <scroll-view
       class="messages-container"
+      :class="{ 'messages-container-mp': isMP }"
       scroll-y
       :lower-threshold="50"
       :scroll-into-view="scrollIntoView"
@@ -210,7 +211,15 @@ import userStore from '@/store/user'
 import { createConversation, getAllConversations, addMessageToConversation, clearAllConversations } from '@/utils/indexedDB'
 import { BASE_URL } from '@/constant'
 
-const appName = ref('我的博客')
+const appName = ref('My Little App')
+
+// 检测小程序平台
+const isMP = ref(false)
+const checkPlatform = () => {
+  // #ifdef MP-WEIXIN
+  isMP.value = true
+  // #endif
+}
 
 // 获取应用名称
 const fetchAppName = async () => {
@@ -219,8 +228,8 @@ const fetchAppName = async () => {
       url: `${BASE_URL}/api/setup/app-name`,
       method: 'GET'
     })
-    if (res[1].statusCode === 200 && res[1].data.success) {
-      appName.value = res[1].data.data
+    if (res.statusCode === 200 && res.data && res.data.success) {
+      appName.value = res.data.data
     }
   } catch (error) {
     console.error('获取应用名称失败:', error)
@@ -229,7 +238,7 @@ const fetchAppName = async () => {
 
 // 模型列表
 const MODELS = [
-  { id: 'siliconflow', name: '基础模型', provider: 'Qwen 8B', requiresAuth: false, hasVision: false, hasDeepThink: true, hasWebSearch: false },
+  { id: 'siliconflow', name: '基础模型', provider: '自研模型', requiresAuth: false, hasVision: false, hasDeepThink: true, hasWebSearch: false },
   { id: 'deepseek', name: '高级模型', provider: '最强满血 DeepSeek', requiresAuth: true, hasVision: false, hasDeepThink: true, hasWebSearch: true }
 ]
 
@@ -250,6 +259,7 @@ const currentModel = ref(MODELS[0]) // 当前选中的模型，默认 SiliconFlo
 const showModelSelector = ref(false) // 是否显示模型选择器
 const aiAction = ref('') // 当前AI动作：'思考' 或 '联网搜索'
 const scrollIntoView = ref('') // 滚动到指定元素
+const scrollTop = ref(0) // 小程序滚动位置
 const scrollForce = ref(0) // 强制滚动计数器
 const userScrolling = ref(false) // 用户是否正在手动滚动
 let scrollTimeout = null // 用户滚动的定时器
@@ -274,26 +284,9 @@ watch(messages, () => {
     return // 用户正在手动滚动，不打断
   }
   nextTick(() => {
-    uni.createSelectorQuery()
-      .select('.messages-container')
-      .boundingClientRect((rect) => {
-        if (rect) {
-          // 设置滚动到底部
-          uni.createSelectorQuery()
-            .select('.messages-container')
-            .scrollOffset((scrollRect) => {
-              if (scrollRect && rect.height) {
-                // 滚动到总高度减去可视高度
-                uni.pageScrollTo({
-                  scrollTop: scrollRect.scrollHeight - rect.height + 100,
-                  duration: 100
-                })
-              }
-            })
-            .exec()
-        }
-      })
-      .exec()
+    setTimeout(() => {
+      scrollToBottom(true)
+    }, 50)
   })
 }, { deep: true })
 
@@ -612,7 +605,7 @@ const checkLoginAndInit = async () => {
 
   // 检查登录状态
   if (!isLoggedIn.value) {
-    // 如果当前是 Qwen3-8B 模型（无需登录），可以继续使用
+    // 如果当前是 免费 模型（无需登录），可以继续使用
     if (currentModel.value.id === 'siliconflow') {
       await loadRecentConversation()
       initialized.value = true
@@ -643,6 +636,8 @@ const checkLoginAndInit = async () => {
 
 // 页面显示时检查登录状态
 onShow(async () => {
+  // 检测平台
+  checkPlatform()
   // 重新初始化用户状态
   userStore.init()
 
@@ -652,7 +647,7 @@ onShow(async () => {
     uni.setStorageSync('hasShownLoginTip', true)
     uni.showModal({
       title: '提示',
-      content: '您当前未登录，可以使用 Qwen3-8B 模型进行 AI 对话。登录后可使用 DeepSeek 模型（支持深度思考和联网搜索）。',
+      content: '您当前未登录，可以使用基础模型进行 AI 对话。登录后可使用满血 DeepSeek 模型（支持深度思考和联网搜索）。',
       showCancel: false,
       confirmText: '知道了'
     })
@@ -1206,7 +1201,7 @@ const scrollToBottom = async (force = false) => {
       scrollIntoView.value = ''
       setTimeout(() => {
         scrollIntoView.value = targetId
-      }, 10)
+      }, 50)
     }
   })
 }
@@ -1688,6 +1683,13 @@ page {
 
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* 小程序端滚动容器 */
+.messages-container-mp {
+  flex: none !important;
+  height: calc(100vh - 200rpx - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  padding-top: 300rpx !important;
 }
 
 /* 顶部占位（填满剩余空间，让消息贴底显示） */

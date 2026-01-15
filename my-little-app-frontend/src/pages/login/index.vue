@@ -115,8 +115,8 @@ const fetchAppName = async () => {
       url: `${BASE_URL}/api/setup/app-name`,
       method: 'GET'
     })
-    if (res[1].statusCode === 200 && res[1].data.success) {
-      appName.value = res[1].data.data
+    if (res.statusCode === 200 && res.data && res.data.success) {
+      appName.value = res.data.data
     }
   } catch (error) {
     console.error('获取应用名称失败:', error)

@@ -95,11 +95,29 @@ public class AdminSetupController {
 
         adminMapper.insert(admin);
 
-        // 保存应用名称
-        systemConfigMapper.updateConfigValue("app_name", appName.trim());
+        // 保存应用名称（先检查是否存在，不存在则插入）
+        SystemConfig existingAppName = systemConfigMapper.selectByConfigKey("app_name");
+        if (existingAppName != null) {
+            systemConfigMapper.updateConfigValue("app_name", appName.trim());
+        } else {
+            SystemConfig newAppName = new SystemConfig();
+            newAppName.setConfigKey("app_name");
+            newAppName.setConfigValue(appName.trim());
+            newAppName.setDescription("应用名称");
+            systemConfigMapper.insert(newAppName);
+        }
 
-        // 标记系统已初始化
-        systemConfigMapper.updateConfigValue("admin_initialized", "true");
+        // 标记系统已初始化（先检查是否存在）
+        SystemConfig existingInitialized = systemConfigMapper.selectByConfigKey("admin_initialized");
+        if (existingInitialized != null) {
+            systemConfigMapper.updateConfigValue("admin_initialized", "true");
+        } else {
+            SystemConfig newInitialized = new SystemConfig();
+            newInitialized.setConfigKey("admin_initialized");
+            newInitialized.setConfigValue("true");
+            newInitialized.setDescription("系统是否已初始化");
+            systemConfigMapper.insert(newInitialized);
+        }
 
         // 返回管理员信息（不包含密码）
         admin.setPassword(null);

@@ -3,6 +3,8 @@ package com.bezhuang.my_little_app_backend.service.impl;
 import com.bezhuang.my_little_app_backend.service.CacheService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -10,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,6 +32,10 @@ public class RedisCacheServiceImpl implements CacheService {
     public RedisCacheServiceImpl(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = new ObjectMapper();
+        // 注册 JavaTimeModule 支持 LocalDateTime 序列化
+        this.objectMapper.registerModule(new JavaTimeModule());
+        // 禁用将日期写成时间戳
+        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         logger.info("Redis 缓存服务已启用");
     }
 

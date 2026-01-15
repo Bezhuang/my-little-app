@@ -46,7 +46,7 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
-		<!-- Spring 官方仓库（部分依赖需要） -->
+		<!-- Spring 官方仓库（已注释：可能导致 401 错误）
 		<repository>
 			<id>spring</id>
 			<name>Spring Repository</name>
@@ -58,6 +58,7 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
+		-->
 	</repositories>
 
 	<pluginRepositories>
@@ -69,11 +70,13 @@
 			<id>central</id>
 			<url>https://repo.maven.apache.org/maven2</url>
 		</pluginRepository>
+		<!-- Spring 插件仓库（已注释：可能导致 401 错误）
 		<pluginRepository>
 			<id>spring</id>
 			<name>Spring Repository</name>
 			<url>https://repo.spring.io/release</url>
 		</pluginRepository>
+		-->
 	</pluginRepositories>
 
 	<dependencies>
@@ -126,6 +129,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<!-- Jackson Java 8 Date/Time support -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
 
 		<!-- WebFlux for WebClient (AI API calls) -->

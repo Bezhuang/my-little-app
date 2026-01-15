@@ -1,53 +1,46 @@
 package com.bezhuang.my_little_app_backend.config.ai;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
+import com.bezhuang.my_little_app_backend.service.AiConfigService;
+import org.springframework.stereotype.Component;
 
 /**
  * DeepSeek AI 配置类
+ * 从数据库读取配置
  */
-@Configuration
+@Component
 public class DeepSeekConfig {
 
-    @Value("${deepseek.api.key}")
-    private String apiKey;
+    private final AiConfigService aiConfigService;
 
-    @Value("${deepseek.api.base-url:https://api.deepseek.com}")
-    private String baseUrl;
-
-    @Value("${deepseek.model}")
-    private String model;
-
-    @Value("${deepseek.reasoner-model}")
-    private String reasonerModel;
-
-    @Value("${deepseek.max.tokens}")
-    private int maxTokens;
-
-    @Value("${deepseek.temperature:0.7}")
-    private double temperature;
+    public DeepSeekConfig(AiConfigService aiConfigService) {
+        this.aiConfigService = aiConfigService;
+    }
 
     public String getApiKey() {
-        return apiKey;
+        return aiConfigService.getDeepSeekApiKey();
     }
 
     public String getBaseUrl() {
-        return baseUrl;
+        return aiConfigService.getDeepSeekBaseUrl();
     }
 
     public String getModel() {
-        return model;
+        return aiConfigService.getDeepSeekModel();
     }
 
     public String getReasonerModel() {
-        return reasonerModel;
+        return aiConfigService.getDeepSeekReasonerModel();
     }
 
     public int getMaxTokens() {
-        return maxTokens;
+        return aiConfigService.getDeepSeekMaxTokens();
     }
 
     public double getTemperature() {
-        return temperature;
+        return aiConfigService.getDeepSeekTemperature();
+    }
+
+    public boolean isEnabled() {
+        return aiConfigService.isDeepSeekEnabled();
     }
 }

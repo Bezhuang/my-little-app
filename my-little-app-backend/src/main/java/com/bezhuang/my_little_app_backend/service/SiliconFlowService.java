@@ -243,7 +243,7 @@ public class SiliconFlowService {
             requestBody.put("temperature", temperature);
             requestBody.put("stream", false);  // 非流式输出
 
-            // Qwen3-8B 支持 enable_thinking 参数开启思考模式
+            // 免费模型 支持 enable_thinking 参数开启思考模式
             if (enableDeepThink) {
                 requestBody.put("enable_thinking", true);
                 requestBody.put("thinking_budget", 4096);
@@ -601,7 +601,7 @@ public class SiliconFlowService {
         requestBody.put("max_tokens", config.getMaxTokens());
         requestBody.put("temperature", temperature);
 
-        // Qwen3-8B 支持 enable_thinking 参数开启思考模式
+        // 免费模型 支持 enable_thinking 参数开启思考模式
         if (enableThinking) {
             requestBody.put("enable_thinking", true);
             // 减小 thinking_budget 让每次思考更简洁，生成多轮短思考

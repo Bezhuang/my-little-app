@@ -161,6 +161,83 @@ INSERT INTO `ai_config` (config_key, config_value, description) VALUES
 ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
 
 -- ----------------------------
+-- DeepSeek AI 配置
+-- ----------------------------
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_api_key', '', 'DeepSeek API Key')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_model', 'deepseek-chat', 'DeepSeek 模型名称')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_enabled', 'true', '是否启用 DeepSeek (true/false)')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_reasoner_model', 'deepseek-reasoner', 'DeepSeek 推理模型名称')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_base_url', 'https://api.deepseek.com', 'DeepSeek API Base URL')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_max_tokens', '4096', 'DeepSeek 最大 Token 数')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('deepseek_temperature', '0.7', 'DeepSeek 温度参数 (0.0-2.0)')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+-- ----------------------------
+-- SiliconFlow AI 配置
+-- ----------------------------
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_api_key', '', 'SiliconFlow API Key')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_model', 'deepseek-ai/DeepSeek-V2.5', 'SiliconFlow 模型名称')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_reasoner_model', 'deepseek-ai/DeepSeek-V2.5', 'SiliconFlow 推理模型名称')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_enabled', 'false', '是否启用 SiliconFlow (true/false)')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_base_url', 'https://api.siliconflow.cn/v1', 'SiliconFlow API Base URL')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_max_tokens', '4096', 'SiliconFlow 最大 Token 数')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('siliconflow_temperature', '0.7', 'SiliconFlow 温度参数 (0.0-2.0)')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+-- ----------------------------
+-- Bocha Web Search API 配置
+-- ----------------------------
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('bocha_api_key', '', 'Bocha Web Search API Key')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('bocha_enabled', 'false', '是否启用 Bocha Web Search (true/false)')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+INSERT INTO `ai_config` (config_key, config_value, description) VALUES
+('bocha_search_limit', '5', 'Bocha 搜索结果数量限制')
+ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
+
+-- ----------------------------
 -- 系统配置表
 -- ----------------------------
 DROP TABLE IF EXISTS `system_config`;
@@ -182,6 +259,10 @@ INSERT INTO `system_config` (config_key, config_value, description) VALUES
 -- 应用名称
 INSERT INTO `system_config` (config_key, config_value, description) VALUES
 ('app_name', 'My Little App', '应用名称');
+
+-- AI 配置缓存过期时间（秒）
+INSERT INTO `system_config` (config_key, config_value, description) VALUES
+('cache_ai_config_ttl', '3600', 'AI 配置缓存过期时间（秒），默认 1 小时');
 
 SET FOREIGN_KEY_CHECKS = 1;
 
