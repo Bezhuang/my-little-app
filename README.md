@@ -6,6 +6,12 @@ My Little App 是一个基于前后端分离架构的企业级全栈应用，支
 
 ## [项目介绍 →](about.md)
 
+## 项目演示（微信小程序 + Web 后台）
+
+https://github.com/user-attachments/assets/ca3cd36f-22e5-430e-800b-ec32f96b2335
+
+https://github.com/user-attachments/assets/62a9a035-eaa6-4a96-93bc-ca8516489a0a
+
 ---
 
 ## Docker 部署
